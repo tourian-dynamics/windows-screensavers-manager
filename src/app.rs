@@ -131,7 +131,7 @@ impl App {
             let state = std::sync::Arc::new(std::sync::Mutex::new(None));
             let thread_state = state.clone();
             std::thread::spawn(move || {
-                let url = "https://raw.githubusercontent.com/tourian-dynamics/Screen-Saver-Manager/master/registry.json";
+                let url = "https://raw.githubusercontent.com/tourian-dynamics/windows-screensavers-manager/master/registry.json";
                 if let Ok(entries) = crate::downloader::fetch_registry(url) {
                     if let Ok(mut lock) = thread_state.lock() {
                         *lock = Some(entries);
