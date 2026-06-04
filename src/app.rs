@@ -131,7 +131,7 @@ impl App {
             let state = std::sync::Arc::new(std::sync::Mutex::new(None));
             let thread_state = state.clone();
             std::thread::spawn(move || {
-                let url = "https://raw.githubusercontent.com/UberMetroid/ssm/master/registry.json";
+                let url = "https://raw.githubusercontent.com/UberMetroid/screen-saver-manager/master/registry.json";
                 if let Ok(entries) = crate::downloader::fetch_registry(url) {
                     if let Ok(mut lock) = thread_state.lock() {
                         *lock = Some(entries);
@@ -559,7 +559,10 @@ impl App {
             .collect();
 
         for entry in entries {
-            let filename = format!("{}.scr", entry.name.to_lowercase().replace(" ", "_"));
+            let filename = entry.download_url.split('/').last().unwrap_or("").to_lowercase();
+            if filename.is_empty() {
+                continue;
+            }
             if local_filenames.contains(&filename) {
                 continue; // Already downloaded/present locally
             }
@@ -1212,27 +1215,28 @@ mod tests {
         // Manually merge registry entries
         let entries = vec![
             crate::downloader::RegistryEntry {
-                name: "OmaXI".to_string(),
+                name: "Win-beams".to_string(),
                 author: "UberMetroid".to_string(),
-                description: "Matrix style clock".to_string(),
-                download_url: "https://example.com/omaxi.scr".to_string(),
+                description: "Beams screensaver".to_string(),
+                download_url: "https://example.com/win-beams.scr".to_string(),
                 version: "1.0".to_string(),
             },
         ];
         app.merge_registry_entries(entries);
 
-        // Verify list now has 4 items (alphabetically ordered: Bubbles, Mystify, OmaXI, Ribbons)
+        // Verify list now has 4 items (alphabetically ordered: Bubbles, Mystify, Ribbons, Win-beams)
         assert_eq!(app.screensavers.len(), 4);
-        assert_eq!(app.screensavers[2].name, "OmaXI");
-        assert_eq!(app.screensavers[2].download_url.as_deref(), Some("https://example.com/omaxi.scr"));
+        assert_eq!(app.screensavers[3].name, "Win-beams");
+        assert_eq!(app.screensavers[3].download_url.as_deref(), Some("https://example.com/win-beams.scr"));
 
-        // Highlight OmaXI (which is index 2)
+        // Highlight Win-beams (which is index 3)
         app.highlighted = 0;
         app.move_highlight(1); // moves to Mystify (index 1)
-        app.move_highlight(1); // moves to OmaXI (index 2)
-        assert_eq!(app.highlighted, 2);
+        app.move_highlight(1); // moves to Ribbons (index 2)
+        app.move_highlight(1); // moves to Win-beams (index 3)
+        assert_eq!(app.highlighted, 3);
 
-        // Pressing space (toggle selection) should trigger background download of OmaXI
+        // Pressing space (toggle selection) should trigger background download of Win-beams
         app.toggle_highlighted_selection();
         assert!(app.download_state.is_some());
         assert_eq!(app.pending_action, Some(PendingAction::ToggleSelection));

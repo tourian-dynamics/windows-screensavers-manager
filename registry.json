@@ -1,9 +1,65 @@
 [
   {
-    "name": "OmaXI",
+    "name": "Win-beams",
     "author": "UberMetroid",
-    "description": "Retro Terminal/Matrix style Screensaver Clock.",
-    "download_url": "https://github.com/UberMetroid/OmaXI/releases/download/v1.0/omaxi.scr",
+    "description": "Sweeping vertical colored spotlights in purple, blue, and pink.",
+    "download_url": "https://github.com/UberMetroid/windows-developer-edition-screensavers/releases/download/V1/win-beams.scr",
+    "version": "1.0"
+  },
+  {
+    "name": "Win-bhop",
+    "author": "UberMetroid",
+    "description": "Cyberpunk Neon Pink and Cyan Hacker TUI with a scrolling live Bhop game panel.",
+    "download_url": "https://github.com/UberMetroid/windows-developer-edition-screensavers/releases/download/V1/win-bhop.scr",
+    "version": "1.0"
+  },
+  {
+    "name": "Win-fire",
+    "author": "UberMetroid",
+    "description": "Majestic Doom fire simulation sweeping upward.",
+    "download_url": "https://github.com/UberMetroid/windows-developer-edition-screensavers/releases/download/V1/win-fire.scr",
+    "version": "1.0"
+  },
+  {
+    "name": "Win-fireworks",
+    "author": "UberMetroid",
+    "description": "Cozy city skyline silhouette with warm lit windows and exploding fireworks.",
+    "download_url": "https://github.com/UberMetroid/windows-developer-edition-screensavers/releases/download/V1/win-fireworks.scr",
+    "version": "1.0"
+  },
+  {
+    "name": "Win-life",
+    "author": "UberMetroid",
+    "description": "Conway's Game of Life simulated on a grid with nebula trails.",
+    "download_url": "https://github.com/UberMetroid/windows-developer-edition-screensavers/releases/download/V1/win-life.scr",
+    "version": "1.0"
+  },
+  {
+    "name": "Win-matrix",
+    "author": "UberMetroid",
+    "description": "Dense Matrix-style falling digital rain using system environment variables.",
+    "download_url": "https://github.com/UberMetroid/windows-developer-edition-screensavers/releases/download/V1/win-matrix.scr",
+    "version": "1.0"
+  },
+  {
+    "name": "Win-party",
+    "author": "UberMetroid",
+    "description": "Rave party simulation featuring twinkling background stars and a disco ball.",
+    "download_url": "https://github.com/UberMetroid/windows-developer-edition-screensavers/releases/download/V1/win-party.scr",
+    "version": "1.0"
+  },
+  {
+    "name": "Win-pour",
+    "author": "UberMetroid",
+    "description": "Waterfall cascade of characters assembling the Windows ASCII logo.",
+    "download_url": "https://github.com/UberMetroid/windows-developer-edition-screensavers/releases/download/V1/win-pour.scr",
+    "version": "1.0"
+  },
+  {
+    "name": "Win-unstable",
+    "author": "UberMetroid",
+    "description": "A purple Windows logo exploding outward into chaotic particles and snapping back.",
+    "download_url": "https://github.com/UberMetroid/windows-developer-edition-screensavers/releases/download/V1/win-unstable.scr",
     "version": "1.0"
   }
 ]
