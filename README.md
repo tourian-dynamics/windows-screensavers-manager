@@ -17,6 +17,16 @@ A lightweight, modern Windows Screen Saver Management TUI dashboard built in Rus
 
 ---
 
+## 📥 Installation
+
+You can install WSM globally via the Windows Package Manager (WinGet):
+
+```powershell
+winget install TourianDynamics.WSM
+```
+
+---
+
 ## 📖 What WSM Does
 
 WSM manages the native Windows Screen Saver system by bridging standard OS-level registry settings with modern terminal-based configuration. Key capabilities include:
