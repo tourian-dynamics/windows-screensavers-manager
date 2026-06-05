@@ -1,3 +1,11 @@
+```text
+  _____                       _             
+ |_   _|___ _ _ ___ _ ___ _ _| |_ _ _____ ___
+   | | | . | | |  _| | . | | | . | | |     |  _|
+   |_| |___|___|_| |_|___|_|_|___|_|_|_|_|_|___|
+                                  D Y N A M I C S
+```
+
 # 🔒 rSaver Privacy Policy
 
 **rSaver (Windows Screensavers Manager)** is built with a commitment to user privacy. As a local terminal application, rSaver does not track, collect, or transmit your personal data.

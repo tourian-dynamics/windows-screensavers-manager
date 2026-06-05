@@ -1,3 +1,11 @@
+```text
+  _____                       _             
+ |_   _|___ _ _ ___ _ ___ _ _| |_ _ _____ ___
+   | | | . | | |  _| | . | | | . | | |     |  _|
+   |_| |___|___|_| |_|___|_|_|___|_|_|_|_|_|___|
+                                  D Y N A M I C S
+```
+
 # 📞 Tourian Dynamics Support
 
 Thank you for using **rSaver (Windows Screensavers Manager)** and our curated screensavers catalog! If you are experiencing issues, follow these steps to get help.

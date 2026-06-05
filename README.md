@@ -1,3 +1,11 @@
+```text
+  _____                       _             
+ |_   _|___ _ _ ___ _ ___ _ _| |_ _ _____ ___
+   | | | . | | |  _| | . | | | . | | |     |  _|
+   |_| |___|___|_| |_|___|_|_|___|_|_|_|_|_|___|
+                                  D Y N A M I C S
+```
+
 # rSaver — Windows Screensavers Manager
 
 A lightweight, modern Windows Screen Saver Management TUI dashboard built in Rust. `rSaver` offers a centralized controller for discovering, previewing, configuring, and cycling screensavers on mixed-DPI multi-monitor environments without touching intrusive registry editors.
