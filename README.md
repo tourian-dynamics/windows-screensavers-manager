@@ -1,16 +1,11 @@
 ```text
-  _____                       _             
- |_   _|___ _ _ ___ _ ___ _ _| |_ _ _____ ___
-   | | | . | | |  _| | . | | | . | | |     |  _|
-   |_| |___|___|_| |_|___|_|_|___|_|_|_|_|_|___|
-                                  D Y N A M I C S
+         _____                               
+   _____/ ___/____ __   _____  _____         
+  / ___/\__ \/ __ `/ | / / _ \/ ___/         
+ / /   ___/ / /_/ /| |/ /  __/ /             
+/_/   /____/\__,_/ |___/\___/_/              
 ```
 
-# rSaver — Windows Screensavers Manager
-
-A lightweight, modern Windows Screen Saver Management TUI dashboard built in Rust. `rSaver` offers a centralized controller for discovering, previewing, configuring, and cycling screensavers on mixed-DPI multi-monitor environments without touching intrusive registry editors.
-
-```
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │  rSaver  │  user@COMPUTERNAME  │  Windows 11 Pro 25H2 (Build 26200)                                      │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────────────┤
