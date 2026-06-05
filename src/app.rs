@@ -97,6 +97,7 @@ pub struct App {
     pub term_width: u16,
     pub term_height: u16,
     pub visual_progress: f64,
+    pub notice: Option<String>,
     #[cfg(feature = "downloader")]
     pub download_state: Option<std::sync::Arc<std::sync::Mutex<crate::downloader::DownloadState>>>,
     #[cfg(feature = "downloader")]
@@ -162,6 +163,7 @@ impl App {
             term_width: 80,
             term_height: 25,
             visual_progress: 0.0,
+            notice: None,
             #[cfg(feature = "downloader")]
             download_state: None,
             #[cfg(feature = "downloader")]
@@ -589,6 +591,7 @@ impl App {
                     text: format!("Deleted screensaver: {}", name),
                     kind: StatusKind::Info,
                 });
+                self.notice = Some(format!("Deleted screensaver: {}", name));
                 let path_str = path.to_string_lossy().into_owned();
                 if let Some(pos) = self.local.selected_paths.iter().position(|p| p == &path_str) {
                     self.local.selected_paths.remove(pos);
@@ -755,6 +758,11 @@ impl App {
 
     /// Handle a single key event.  Returns `true` if the app should quit.
     pub fn handle_key(&mut self, code: KeyCode, modifiers: KeyModifiers) -> bool {
+        if self.notice.is_some() {
+            self.notice = None;
+            return self.should_quit;
+        }
+
         // Clear any error status on any user keypress. Info status remains subject to the timer.
         if let Some(ref msg) = self.status {
             if msg.kind == StatusKind::Error {

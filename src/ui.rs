@@ -64,6 +64,10 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             render_pacman_overlay(app, frame);
         }
     }
+
+    if app.notice.is_some() {
+        render_notice_overlay(app, frame);
+    }
 }
 
 fn render_too_small(theme: crate::theme::TuiTheme, frame: &mut Frame, area: Rect) {
@@ -386,88 +390,62 @@ fn render_help(theme: crate::theme::TuiTheme, frame: &mut Frame, area: Rect) {
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    let cols = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(55),
-            Constraint::Percentage(45),
-        ])
-        .split(inner);
-
-    let shortcuts = vec![
+    let help_lines = vec![
         Line::from(Span::styled("KEYBOARD SHORTCUTS:", Style::default().fg(theme.header))),
         Line::from(vec![
             Span::styled("[Tab]     ", Style::default().fg(theme.accent_primary)),
-            Span::raw("cycle focus"),
+            Span::raw("cycle focus between Preferences and Screen Saver list"),
         ]),
         Line::from(vec![
             Span::styled("[↑/↓]     ", Style::default().fg(theme.accent_primary)),
-            Span::raw("navigate"),
+            Span::raw("navigate preferences or screensaver entries"),
         ]),
         Line::from(vec![
             Span::styled("[←/→]     ", Style::default().fg(theme.accent_primary)),
-            Span::raw("adjust timeout/cycle"),
+            Span::raw("adjust screensaver Timeout or Cycle Time"),
         ]),
         Line::from(vec![
             Span::styled("[Space]   ", Style::default().fg(theme.accent_primary)),
-            Span::raw("toggle select/pref"),
+            Span::raw("toggle checkboxes or active system settings"),
         ]),
         Line::from(vec![
             Span::styled("[Enter]   ", Style::default().fg(theme.accent_primary)),
-            Span::raw("apply highlighted"),
+            Span::raw("apply highlighted screensaver configuration to registry"),
         ]),
         Line::from(vec![
             Span::styled("[F5 / R]  ", Style::default().fg(theme.accent_primary)),
-            Span::raw("refresh list"),
+            Span::raw("re-scan System32 and %APPDATA% directories for screensavers"),
         ]),
         Line::from(vec![
             Span::styled("[P]       ", Style::default().fg(theme.accent_primary)),
-            Span::raw("preview highlighted"),
+            Span::raw("launch a fullscreen preview of highlighted screensaver"),
         ]),
         Line::from(vec![
             Span::styled("[C]       ", Style::default().fg(theme.accent_primary)),
-            Span::raw("configure highlighted"),
+            Span::raw("open the native configuration settings window"),
         ]),
         Line::from(vec![
             Span::styled("[D]       ", Style::default().fg(theme.accent_primary)),
-            Span::raw("delete downloaded"),
+            Span::raw("delete downloaded screensavers from local system"),
         ]),
         Line::from(vec![
             Span::styled("[V]       ", Style::default().fg(theme.accent_primary)),
-            Span::raw("toggle vanity mode"),
+            Span::raw("toggle interactive vanity modes and animations"),
         ]),
         Line::from(vec![
             Span::styled("[q / Esc] ", Style::default().fg(theme.accent_primary)),
-            Span::raw("quit"),
+            Span::raw("quit the manager interface"),
+        ]),
+        Line::raw(""),
+        Line::from(vec![
+            Span::styled("CLI Commands: ", Style::default().fg(theme.header)),
+            Span::styled("Run ", Style::default().fg(theme.text_dim)),
+            Span::styled("wsm.exe --help", Style::default().fg(theme.accent_secondary)),
+            Span::styled(" in terminal to view command line syntax (run, stop, lock, doctor).", Style::default().fg(theme.text_dim)),
         ]),
     ];
 
-    let cli_commands = vec![
-        Line::from(Span::styled("CLI COMMANDS:", Style::default().fg(theme.header))),
-        Line::from(vec![
-            Span::styled("run / start   ", Style::default().fg(theme.accent_primary)),
-            Span::raw("launch active fullscreen"),
-        ]),
-        Line::from(vec![
-            Span::styled("stop          ", Style::default().fg(theme.accent_primary)),
-            Span::raw("kill all screensavers"),
-        ]),
-        Line::from(vec![
-            Span::styled("toggle-active ", Style::default().fg(theme.accent_primary)),
-            Span::raw("toggle system active"),
-        ]),
-        Line::from(vec![
-            Span::styled("lock          ", Style::default().fg(theme.accent_primary)),
-            Span::raw("lock PC & start"),
-        ]),
-        Line::from(vec![
-            Span::styled("doctor        ", Style::default().fg(theme.accent_primary)),
-            Span::raw("run diagnostics report"),
-        ]),
-    ];
-
-    frame.render_widget(Paragraph::new(shortcuts).wrap(Wrap { trim: false }), cols[0]);
-    frame.render_widget(Paragraph::new(cli_commands).wrap(Wrap { trim: false }), cols[1]);
+    frame.render_widget(Paragraph::new(help_lines).wrap(Wrap { trim: false }), inner);
 }
 
 pub fn truncate(s: &str, max: usize) -> String {
@@ -598,7 +576,7 @@ fn render_pacman_overlay(app: &App, frame: &mut Frame) {
                 }
             }
         } else {
-            track.push_str("o ᗣ (Chomped!)");
+            track.push_str("o ᗣ");
         }
 
         let lines = vec![
@@ -613,5 +591,37 @@ fn render_pacman_overlay(app: &App, frame: &mut Frame) {
             ]),
         ];
         frame.render_widget(Paragraph::new(lines), inner);
+    }
+}
+
+pub fn render_notice_overlay(app: &App, frame: &mut Frame) {
+    let theme = app.theme;
+    let area = frame.area();
+    
+    let popup_width = 46;
+    let popup_height = 5;
+    let x = (area.width.saturating_sub(popup_width)) / 2;
+    let y = (area.height.saturating_sub(popup_height)) / 2;
+    let popup_area = Rect::new(x, y, popup_width.min(area.width), popup_height.min(area.height));
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.accent_secondary))
+        .title(Span::styled(" Notice ", Style::default().fg(theme.header)));
+    
+    frame.render_widget(Clear, popup_area);
+
+    let inner = block.inner(popup_area);
+    frame.render_widget(block, popup_area);
+
+    if let Some(ref notice_text) = app.notice {
+        let lines = vec![
+            Line::from(Span::styled(truncate(notice_text, (inner.width as usize).saturating_sub(2)), Style::default().fg(theme.text_main))),
+            Line::raw(""),
+            Line::from(Span::styled("[ Press any key to dismiss ]", Style::default().fg(theme.text_dim))),
+        ];
+        let paragraph = Paragraph::new(lines)
+            .alignment(ratatui::layout::Alignment::Center);
+        frame.render_widget(paragraph, inner);
     }
 }
