@@ -30,7 +30,16 @@ windows-sys = { version = "0.59", features = [
 ureq = { version = "2.9", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
+windows = { version = "0.52.0", features = [
+    "Data_Xml_Dom",
+    "UI_Notifications",
+] }
+rcommon = { git = "https://github.com/tourian-dynamics/rCommon.git", branch = "main" }
 
 [build-dependencies]
 embed-resource = "2.5"
+
+# To build locally before pushing rCommon to GitHub, uncomment:
+# [patch."https://github.com/tourian-dynamics/rCommon.git"]
+# rcommon = { path = "../rCommon" }
 

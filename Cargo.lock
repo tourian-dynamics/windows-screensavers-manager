@@ -322,7 +322,7 @@ dependencies = [
  "rustc_version",
  "toml",
  "vswhom",
- "winreg",
+ "winreg 0.52.0",
 ]
 
 [[package]]
@@ -810,6 +810,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rcommon"
+version = "0.1.0"
+dependencies = [
+ "crossterm",
+ "ratatui",
+ "sysinfo",
+ "windows",
+ "windows-sys 0.59.0",
+ "winreg 0.56.0",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -851,12 +863,13 @@ dependencies = [
 
 [[package]]
 name = "rsav"
-version = "2.6.0"
+version = "2.6.3"
 dependencies = [
  "clap",
  "crossterm",
  "embed-resource",
  "ratatui",
+ "rcommon",
  "serde",
  "serde_json",
  "sysinfo",
@@ -864,8 +877,9 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "ureq",
+ "windows",
  "windows-sys 0.59.0",
- "winreg",
+ "winreg 0.52.0",
 ]
 
 [[package]]
@@ -1685,6 +1699,16 @@ checksum = "a277a57398d4bfa075df44f501a17cfdf8542d224f0d36095a2adc7aee4ef0a5"
 dependencies = [
  "cfg-if",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "winreg"
+version = "0.56.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d6f32a0ff4a9f6f01231eb2059cc85479330739333e0e58cadf03b6af2cca10"
+dependencies = [
+ "cfg-if",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

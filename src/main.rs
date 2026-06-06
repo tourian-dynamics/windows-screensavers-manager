@@ -10,7 +10,13 @@ mod config;
 mod preview;
 mod theme;
 mod ui;
-mod win32;
+mod saver_win32;
+/// Unified win32 module re-exporting common APIs and screensaver-specific APIs.
+pub mod win32 {
+    pub use rcommon::win32::*;
+    pub use crate::saver_win32::*;
+    pub use crate::saver_win32::{query_power_status, PowerStatus};
+}
 
 #[cfg(feature = "downloader")]
 pub mod downloader;
@@ -225,7 +231,7 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
 
     ratatui::crossterm::terminal::enable_raw_mode()?;
     let mut out = stdout();
-    let _ = ratatui::crossterm::execute!(out, ratatui::crossterm::terminal::SetSize(110, 38));
+    let _ = ratatui::crossterm::execute!(out, ratatui::crossterm::terminal::SetSize(100, 35));
     ratatui::crossterm::execute!(
         out,
         ratatui::crossterm::terminal::EnterAlternateScreen,
@@ -307,8 +313,7 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
                     } else {
                         format!("Successfully downloaded: {}", downloaded_name)
                     };
-                    // Toast disabled to prevent Windows notification from stealing focus from the TUI.
-                    // win32::show_toast_notification("rSaver - Download Completed", &_toast_msg);
+                    win32::show_toast_notification("rSaver - Download Completed", &_toast_msg);
                     win32::log_windows_event(
                         "rSaver",
                         4, // EVENTLOG_INFORMATION_TYPE
@@ -363,11 +368,10 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
                         }
                     }
                 } else if let Some(msg) = err_msg {
-                    // Toast disabled to prevent Windows notification from stealing focus from the TUI.
-                    // win32::show_toast_notification(
-                    //     "rSaver - Download Failed",
-                    //     &format!("Failed to download {}: {}", downloaded_name, msg),
-                    // );
+                    win32::show_toast_notification(
+                        "rSaver - Download Failed",
+                        &format!("Failed to download {}: {}", downloaded_name, msg),
+                    );
                     win32::log_windows_event(
                         "rSaver",
                         1, // EVENTLOG_ERROR_TYPE
