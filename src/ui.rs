@@ -31,7 +31,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3), // 0: Header box
-            Constraint::Length(7), // 1: Global Prefs & Help (side-by-side)
+            Constraint::Length(7), // 1: Global Screensaver Preferences (full width)
             Constraint::Min(10),   // 2: Screensaver Preferences list
             Constraint::Length(3), // 3: Status / Progress footer box
         ])
@@ -69,17 +69,8 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     frame.render_widget(header_block, chunks[0]);
     frame.render_widget(Paragraph::new(header_line), header_inner);
 
-    // 1. Render Side-by-Side Global Prefs & Help
-    let top_split = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(50),
-            Constraint::Percentage(50),
-        ])
-        .split(chunks[1]);
-
-    render_prefs(app, frame, top_split[0]);
-    render_help(theme, frame, top_split[1]);
+    // 1. Render Global Screensaver Preferences (full width)
+    render_prefs(app, frame, chunks[1]);
 
     // 2. Render Screensaver Preferences List Table
     render_list(app, frame, chunks[2]);
@@ -106,6 +97,21 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             }
         }
     }
+
+    // Contextual hint for online/curated items (first-principles: keep table columns clean,
+    // show action in the status/feedback area when relevant).
+    #[cfg(feature = "downloader")]
+    let current_online_hint = if let Some(s) = app.screensavers.get(app.highlighted) {
+        if s.download_url.is_some() && !s.path.exists() {
+            "  |  Press Space/Enter to download this curated screensaver"
+        } else {
+            ""
+        }
+    } else {
+        ""
+    };
+    #[cfg(not(feature = "downloader"))]
+    let current_online_hint = "";
 
     #[cfg(feature = "downloader")]
     let footer_p = if is_downloading {
@@ -164,7 +170,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         ]))
     } else {
         Paragraph::new(Line::from(vec![
-            Span::styled("Ready. Press Tab to cycle focus.", Style::default().fg(theme.text_dim)),
+            Span::styled(format!("Ready. Press Tab to cycle focus.{}", current_online_hint), Style::default().fg(theme.text_dim)),
         ]))
     };
 
@@ -180,7 +186,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         ]))
     } else {
         Paragraph::new(Line::from(vec![
-            Span::styled("Ready. Press Tab to cycle focus.", Style::default().fg(theme.text_dim)),
+            Span::styled(format!("Ready. Press Tab to cycle focus.{}", current_online_hint), Style::default().fg(theme.text_dim)),
         ]))
     };
 
@@ -505,49 +511,6 @@ fn render_prefs(app: &mut App, frame: &mut Frame, area: Rect) {
     frame.render_widget(Paragraph::new(lines), prefs_inner);
 }
 
-fn render_help(theme: crate::theme::TuiTheme, frame: &mut Frame, area: Rect) {
-    let help_block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme.border))
-        .title(Span::styled(
-            " Help & Keyboard Shortcuts ",
-            Style::default().fg(theme.header).add_modifier(Modifier::BOLD),
-        ));
-
-    let col1 = [
-        ("Tab", "Focus"),
-        ("↑/↓", "Move"),
-        ("←/→", "Adjust"),
-        ("Space/Enter", "Toggle/Apply"),
-        ("h / H", "Help Info"),
-    ];
-
-    let col2 = [
-        ("R / r", "Rescan"),
-        ("P", "Preview"),
-        ("C", "Config"),
-        ("D", "Delete"),
-        ("q/Esc", "Quit"),
-    ];
-
-    let mut lines = Vec::new();
-
-    for i in 0..5 {
-        let (k1, d1) = col1[i];
-        let (k2, d2) = col2[i];
-        lines.push(Line::from(vec![
-            Span::styled(format!("  {:<12}", k1), Style::default().fg(theme.accent_primary)),
-            Span::raw(format!("{:<15}", d1)),
-            Span::styled(format!("  {:<8}", k2), Style::default().fg(theme.accent_primary)),
-            Span::raw(d2),
-        ]));
-    }
-
-    let help_inner = help_block.inner(area);
-    frame.render_widget(help_block, area);
-    frame.render_widget(Paragraph::new(lines), help_inner);
-}
-
 fn render_list(app: &mut App, frame: &mut Frame, area: Rect) {
     let theme = app.theme;
     let active = app.focused == FocusedSection::SaverList;
@@ -572,13 +535,12 @@ fn render_list(app: &mut App, frame: &mut Frame, area: Rect) {
         ])
         .split(list_inner);
 
-    // Table Header Alignment to match the List items
+    // Table Header - simplified per user request:
+    // Active (yes or no) | Name | Type (stock or custom)
     let header_line = Line::from(vec![
         Span::raw("   "),
-        Span::styled("STATUS        ", if active { theme.accent_primary } else { theme.header }),
-        Span::styled("LOCATION      ", Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD)),
-        Span::styled("FRIENDLY NAME             ", Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD)),
-        Span::styled("FILE NAME           ", Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD)),
+        Span::styled("ACTIVE    ", if active { theme.accent_primary } else { theme.header }),
+        Span::styled("NAME                              ", Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD)),
         Span::styled("TYPE", Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD)),
     ]);
     frame.render_widget(Paragraph::new(header_line), list_chunks[0]);

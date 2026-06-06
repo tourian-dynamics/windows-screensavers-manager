@@ -3,7 +3,7 @@ rSaver Windows Screensaver Manager
 You can install rSaver globally via the Windows Package Manager (WinGet):
 winget install TourianDynamics.rsav
 
-What's New in v2.0 (Unified Release)
+What's New (Current Release)
 This release aligns the visual styling, interfaces, and experience of rSaver and rMonitor under a unified dashboard design system:
   Standardized Borders: Separate bordered blocks for each UI section, removing the outer screen-wide border.
   Unified Title Bar: Standardized header layout displaying App Name, user@host, and OS & Build.
@@ -71,7 +71,15 @@ feed_urls: https://raw.githubusercontent.com/tourian-dynamics/rSaver/master/regi
 Cross-platform support:
 rSaver detects the current OS (`current_platform()`) and selects the right asset from the "downloads" map in the registry.
 - Windows: .scr binary
-- Linux: A single `linux/` bundle (tarball containing the plain ELF xscreensaver hack + .xml descriptor). rSaver will extract and place the binary in `~/.xscreensaver/` and the .xml in the config directory so xscreensaver can find it. No deb/rpm packaging is needed on the source side — a plain executable + .xml is the portable xscreensaver format.
+- Linux: Picks the best variant from the downloads map:
+  - Prefers `linux-deb` when dpkg/apt detected
+  - Then `linux-rpm` when rpm/dnf/yum/zypper detected
+  - Then `linux-arch` (`.pkg.tar.zst`) when pacman detected
+  - Falls back to raw `linux` ELF otherwise
+  For the raw ELF, rSaver downloads it, installs the executable to `~/.xscreensaver/<name>`, chmod +x, and generates a minimal .xml descriptor under `~/.xscreensaver/config/<name>.xml` (option B — rSaver generates client-side so the published linux/ folder stays a simple collection of ELF + convenience packages).
+- Packages (.deb / .rpm / .pkg.tar.zst): downloaded to the local rSaver cache (`~/.local/share/rSaver/screensavers/` or XDG equivalent). A `<name>.install.txt` sidecar is written with the exact command, and the TUI status bar shows the one-liner (e.g. `sudo pacman -U ...`). Yes, we include Arch (linux-arch + .pkg.tar.zst).
+
+This design lets a single `screensavers/<style>/linux/` folder in rScreensavers contain the portable ELF + the three package formats. No tarballs.
 
 Building From Source
 Ensure you have the Rust compiler toolchain installed on Windows.

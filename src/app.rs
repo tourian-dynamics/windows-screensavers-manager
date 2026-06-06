@@ -125,6 +125,18 @@ impl App {
         local: LocalConfig,
         theme: TuiTheme,
     ) -> Self {
+        let mut local = local;
+        if local.hide_stock {
+            // If stock screensavers are hidden, they should not be active in the cycle.
+            let orig_len = local.selected_paths.len();
+            local.selected_paths.retain(|p| {
+                !crate::preview::is_stock_screensaver(std::path::Path::new(p))
+            });
+            if local.selected_paths.len() != orig_len {
+                let _ = local.save();
+            }
+        }
+
         let highlighted = local
             .last_selected
             .as_deref()
@@ -143,15 +155,28 @@ impl App {
             let feed_urls = local.feed_urls.clone();
             std::thread::spawn(move || {
                 let mut all_entries = Vec::new();
+
+                // Load local registry.json first (for local dev/testing the catalog/URLs
+                // without needing to push to GitHub first). This takes precedence.
+                if let Ok(local_entries) = crate::downloader::load_local_registry() {
+                    for entry in local_entries {
+                        if !all_entries.iter().any(|e: &crate::downloader::RegistryEntry| e.name.eq_ignore_ascii_case(&entry.name)) {
+                            all_entries.push(entry);
+                        }
+                    }
+                }
+
                 for url in feed_urls {
                     if let Ok(entries) = crate::downloader::fetch_registry(&url) {
                         for entry in entries {
-                            if !all_entries.iter().any(|e: &crate::downloader::RegistryEntry| e.download_url == entry.download_url) {
+                            // Dedup by name (stable across feeds and the downloads map format where legacy download_url is often None)
+                            if !all_entries.iter().any(|e: &crate::downloader::RegistryEntry| e.name.eq_ignore_ascii_case(&entry.name)) {
                                 all_entries.push(entry);
                             }
                         }
                     }
                 }
+
                 if !all_entries.is_empty() {
                     if let Ok(mut lock) = thread_state.lock() {
                         *lock = Some(all_entries);
@@ -239,55 +264,32 @@ impl App {
             .map(|s| {
                 let is_checked = self.local.selected_paths.contains(&s.path.to_string_lossy().into_owned());
                 let exists = s.path.exists();
-
-                let prefix = if is_checked { "[x]" } else { "[ ]" };
-                let status_str = if is_checked {
-                    format!("{} Active", prefix)
-                } else {
-                    format!("{} Inactive", prefix)
-                };
-                let status_color = if is_checked {
-                    theme.applied
-                } else {
-                    theme.text_dim
-                };
-
-                let location_str = if !exists {
-                    "              ".to_string() // 14 spaces
-                } else {
-                    let path_lower = s.path.to_string_lossy().to_lowercase();
-                    if path_lower.contains("system32") {
-                        "\\system32     ".to_string()
-                    } else if path_lower.contains("windows") {
-                        "\\windows      ".to_string()
-                    } else if path_lower.contains("appdata") || path_lower.contains("roaming") {
-                        "\\appdata      ".to_string()
-                    } else {
-                        "              ".to_string()
-                    }
-                };
-                let location_color = if !exists {
-                    theme.text_dim
-                } else {
-                    theme.text_main
-                };
-
-                let friendly_name = crate::ui::truncate(&s.name, 24);
-                let friendly_str = format!("{:<24}  ", friendly_name);
-
-                let filename = s.path.file_name()
-                    .and_then(|f| f.to_str())
-                    .unwrap_or("");
-                let filename_truncated = crate::ui::truncate(filename, 18);
-                let filename_str = format!("{:<18}  ", filename_truncated);
-
+                let is_online = s.download_url.is_some() && !exists;
                 let is_stock = crate::preview::is_stock_screensaver(&s.path);
-                let stock_str = if is_stock {
+
+                // Simplified columns per user request:
+                // Active (yes or no) | Name | Type (stock or custom)
+                let active_str = if is_checked { "yes" } else { "no" };
+                let active_color = if is_checked { theme.applied } else { theme.text_dim };
+
+                let name = crate::ui::truncate(&s.name, 28);
+                let name_str = format!("{:<30}  ", name);
+                let name_color = if is_online {
+                    theme.accent_primary
+                } else if is_checked {
+                    theme.text_main
+                } else {
+                    theme.text_dim
+                };
+
+                let type_str = if is_stock {
                     "Stock"
+                } else if is_online {
+                    "Custom"  // curated items become custom once downloaded
                 } else {
                     "Custom"
                 };
-                let stock_color = if is_stock {
+                let type_color = if is_stock {
                     theme.text_dim
                 } else {
                     theme.accent_secondary
@@ -295,32 +297,16 @@ impl App {
 
                 let spans = vec![
                     ratatui::text::Span::styled(
-                        format!("{:<12}  ", status_str),
-                        ratatui::style::Style::default().fg(status_color),
+                        format!("{:<8}  ", active_str),
+                        ratatui::style::Style::default().fg(active_color),
                     ),
                     ratatui::text::Span::styled(
-                        location_str,
-                        ratatui::style::Style::default().fg(location_color),
+                        name_str,
+                        ratatui::style::Style::default().fg(name_color),
                     ),
                     ratatui::text::Span::styled(
-                        friendly_str,
-                        ratatui::style::Style::default().fg(if is_checked {
-                            theme.text_main
-                        } else {
-                            theme.text_dim
-                        }),
-                    ),
-                    ratatui::text::Span::styled(
-                        filename_str,
-                        ratatui::style::Style::default().fg(if is_checked {
-                            theme.text_main
-                        } else {
-                            theme.text_dim
-                        }),
-                    ),
-                    ratatui::text::Span::styled(
-                        stock_str.to_string(),
-                        ratatui::style::Style::default().fg(stock_color),
+                        type_str.to_string(),
+                        ratatui::style::Style::default().fg(type_color),
                     ),
                 ];
                 ratatui::widgets::ListItem::new(ratatui::text::Line::from(spans))
@@ -448,6 +434,12 @@ impl App {
     /// Toggle hiding stock windows screensavers.
     pub fn toggle_hide_stock(&mut self) {
         self.local.hide_stock = !self.local.hide_stock;
+        if self.local.hide_stock {
+            // If stock screensavers are hidden, they should not be active in the cycle.
+            self.local.selected_paths.retain(|p| {
+                !crate::preview::is_stock_screensaver(std::path::Path::new(p))
+            });
+        }
         if let Some(s) = self.current_screensaver() {
             if let Some(name) = s.path.file_name().and_then(|f| f.to_str()) {
                 self.local.last_selected = Some(name.to_string());

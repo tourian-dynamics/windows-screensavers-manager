@@ -271,10 +271,12 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
             let mut download_success = false;
             let mut err_msg = None;
             let mut downloaded_name = String::new();
+            let mut post_install: Option<String> = None;
 
             if let Some(ref state_mutex) = app.download_state {
                 if let Ok(state) = state_mutex.lock() {
                     downloaded_name = state.name.clone();
+                    post_install = state.post_install_command.clone();
                     match state.status {
                         crate::downloader::DownloadStatus::Success => {
                             if app.visual_progress >= 1.0 {
@@ -294,21 +296,54 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
             if reset_state {
                 app.download_state = None;
                 if download_success {
-                    win32::show_toast_notification(
-                        "rSaver - Download Completed",
-                        &format!("Successfully downloaded: {}", downloaded_name),
-                    );
+                    let toast_msg = if post_install.is_some() {
+                        format!("Downloaded package: {} (see status for install cmd)", downloaded_name)
+                    } else {
+                        format!("Successfully downloaded: {}", downloaded_name)
+                    };
+                    // Toast disabled to prevent Windows notification from stealing focus from the TUI.
+                    // win32::show_toast_notification("rSaver - Download Completed", &toast_msg);
                     win32::log_windows_event(
                         "rSaver",
                         4, // EVENTLOG_INFORMATION_TYPE
                         1001,
                         &format!("Successfully downloaded: {}", downloaded_name),
                     );
-                    app.status = Some(crate::app::StatusMessage {
-                        text: format!("Downloaded: {}", downloaded_name),
-                        kind: crate::app::StatusKind::Info,
-                    });
+
                     app.refresh_screensavers();
+
+                    // Re-locate the just-downloaded saver by name (case-insensitive match on
+                    // saver name or the basename/stem of its path) so that the pending action
+                    // (apply/preview/...) and the highlight operate on the correct item after
+                    // discover + merge have rebuilt and re-sorted the list. This makes rSaver
+                    // "know where the new screensavers are located" after a download lands.
+                    if !downloaded_name.is_empty() {
+                        if let Some(pos) = app.screensavers.iter().position(|s| {
+                            s.name.eq_ignore_ascii_case(&downloaded_name) ||
+                            s.path.file_name()
+                                .and_then(|f| f.to_str())
+                                .map_or(false, |f| f.eq_ignore_ascii_case(&downloaded_name) ||
+                                    f.eq_ignore_ascii_case(&format!("{}.scr", downloaded_name)) ||
+                                    f.eq_ignore_ascii_case(&format!("{}.exe", downloaded_name)))
+                            ||
+                            s.path.file_stem()
+                                .and_then(|f| f.to_str())
+                                .map_or(false, |f| f.eq_ignore_ascii_case(&downloaded_name))
+                        }) {
+                            app.highlighted = pos;
+                        }
+                    }
+
+                    // Ensure highlighted is valid after the list was rebuilt by refresh (in case
+                    // the downloaded item wasn't found by name match or list size changed).
+                    app.resolve_highlight();
+
+                    // Clear any "Refreshed" message that refresh_screensavers set; the
+                    // apply below (or toast) will provide the right feedback.
+                    if matches!(app.status.as_ref().map(|m| m.text.as_str()), Some(t) if t.starts_with("Refreshed")) {
+                        app.status = None;
+                    }
+
                     if let Some(action) = app.pending_action.take() {
                         match action {
                             crate::app::PendingAction::Apply => app.apply_highlighted(),
@@ -322,10 +357,11 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
                         }
                     }
                 } else if let Some(msg) = err_msg {
-                    win32::show_toast_notification(
-                        "rSaver - Download Failed",
-                        &format!("Failed to download {}: {}", downloaded_name, msg),
-                    );
+                    // Toast disabled to prevent Windows notification from stealing focus from the TUI.
+                    // win32::show_toast_notification(
+                    //     "rSaver - Download Failed",
+                    //     &format!("Failed to download {}: {}", downloaded_name, msg),
+                    // );
                     win32::log_windows_event(
                         "rSaver",
                         1, // EVENTLOG_ERROR_TYPE
