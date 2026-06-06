@@ -21,8 +21,9 @@ use windows_sys::Win32::UI::HiDpi::{GetDpiForSystem, GetDpiForWindow};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     GWL_STYLE, GetSystemMetrics, GetWindowLongPtrW, SM_CXSCREEN, SM_CYSCREEN, SPI_GETHIGHCONTRAST,
     SPI_SETSCREENSAVEACTIVE, SPI_SETSCREENSAVETIMEOUT, SPIF_SENDCHANGE, SPIF_UPDATEINIFILE,
-    SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOZORDER, SetWindowLongPtrW, SetWindowPos,
+    SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOZORDER, SWP_NOSIZE, SetWindowLongPtrW, SetWindowPos,
     SystemParametersInfoW, WS_CAPTION, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_SYSMENU, WS_THICKFRAME,
+    GetCursorPos,
 };
 
 const STYLE_MASK_TO_STRIP: i32 =
@@ -140,10 +141,23 @@ impl BorderlessConsole {
         let metrics = SystemMetrics::query();
         let dpi = metrics.window_dpi;
         let scale = dpi as f32 / 96.0;
-        let width = (780.0 * scale) as i32;
-        let height = (520.0 * scale) as i32;
-        let x = (metrics.screen_w - width) / 2;
-        let y = (metrics.screen_h - height) / 2;
+        let width = (900.0 * scale) as i32;
+        let height = (900.0 * scale) as i32;
+
+        let mut x = (metrics.screen_w - width) / 2;
+        let mut y = (metrics.screen_h - height) / 2;
+
+        let h_monitor = unsafe { windows_sys::Win32::Graphics::Gdi::MonitorFromWindow(hwnd, 2) }; // MONITOR_DEFAULTTONEAREST = 2
+        if h_monitor != std::ptr::null_mut() {
+            let mut mi: windows_sys::Win32::Graphics::Gdi::MONITORINFO = unsafe { std::mem::zeroed() };
+            mi.cbSize = std::mem::size_of::<windows_sys::Win32::Graphics::Gdi::MONITORINFO>() as u32;
+            if unsafe { windows_sys::Win32::Graphics::Gdi::GetMonitorInfoW(h_monitor, &mut mi as *mut _ as *mut _) } != 0 {
+                let monitor_w = mi.rcWork.right - mi.rcWork.left;
+                let monitor_h = mi.rcWork.bottom - mi.rcWork.top;
+                x = mi.rcWork.left + (monitor_w - width) / 2;
+                y = mi.rcWork.top + (monitor_h - height) / 2;
+            }
+        }
 
         unsafe {
             SetWindowPos(
@@ -183,6 +197,44 @@ impl Drop for BorderlessConsole {
                 width,
                 height,
                 SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE,
+            );
+        }
+    }
+}
+
+pub fn query_cursor_pos() -> Option<(i32, i32)> {
+    unsafe {
+        let mut pt = windows_sys::Win32::Foundation::POINT { x: 0, y: 0 };
+        if GetCursorPos(&mut pt) != 0 {
+            Some((pt.x, pt.y))
+        } else {
+            None
+        }
+    }
+}
+
+pub fn get_window_rect() -> Option<RECT> {
+    let hwnd = unsafe { GetConsoleWindow() };
+    if hwnd.is_null() {
+        return None;
+    }
+    let mut rect: RECT = unsafe { std::mem::zeroed() };
+    let ok = unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetWindowRect(hwnd, &mut rect) };
+    if ok == 0 { None } else { Some(rect) }
+}
+
+pub fn set_window_pos(x: i32, y: i32) {
+    let hwnd = unsafe { GetConsoleWindow() };
+    if !hwnd.is_null() {
+        unsafe {
+            SetWindowPos(
+                hwnd,
+                std::ptr::null_mut(),
+                x,
+                y,
+                0,
+                0,
+                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
             );
         }
     }
@@ -708,6 +760,7 @@ impl GlyphMap {
 }
 
 /// Trigger a native Windows Toast Notification using a PowerShell/WinRT shim.
+#[allow(dead_code)]
 pub fn show_toast_notification(title: &str, message: &str) {
     let script = format!(
         "[void] [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]; \
@@ -775,6 +828,53 @@ pub fn log_windows_event(source_name: &str, event_type: u16, event_id: u32, mess
                 std::ptr::null_mut(), // raw data
             );
             DeregisterEventSource(handle);
+        }
+    }
+}
+
+/// If the application is running in a pseudoconsole (like Windows Terminal) and we want it
+/// to run as a standalone styled window, relaunch it inside conhost.exe.
+pub fn relaunch_in_conhost_if_needed() {
+    #[cfg(windows)]
+    {
+        // 1. Check if we have the --relaunched flag to prevent any potential loops
+        let args: Vec<String> = std::env::args().collect();
+        if args.iter().any(|arg| arg == "--relaunched") {
+            return;
+        }
+
+        // 2. Detect if we are in conhost or a pseudoconsole (like Windows Terminal)
+        let hwnd = unsafe { GetConsoleWindow() };
+        let is_conhost = if hwnd.is_null() {
+            false
+        } else {
+            use windows_sys::Win32::UI::WindowsAndMessaging::GetWindowRect;
+            let mut rect: RECT = unsafe { std::mem::zeroed() };
+            let ok = unsafe { GetWindowRect(hwnd, &mut rect) };
+            let style = unsafe { GetWindowLongPtrW(hwnd, GWL_STYLE) };
+            ok != 0 && (rect.right - rect.left) > 0 && style != 0
+        };
+
+        if !is_conhost {
+            // Relaunch in conhost.exe
+            let current_exe = std::env::current_exe().unwrap();
+            let mut cmd_args = vec![
+                "/c".to_string(),
+                "start".to_string(),
+                "".to_string(),
+                "conhost.exe".to_string(),
+                current_exe.to_str().unwrap().to_string(),
+            ];
+            // Pass all original args, plus the --relaunched flag
+            for arg in args.into_iter().skip(1) {
+                cmd_args.push(arg);
+            }
+            cmd_args.push("--relaunched".to_string());
+
+            let _ = std::process::Command::new("cmd.exe")
+                .args(&cmd_args)
+                .spawn();
+            std::process::exit(0);
         }
     }
 }

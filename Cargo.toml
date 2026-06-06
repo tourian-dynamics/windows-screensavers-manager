@@ -1,6 +1,6 @@
 [package]
 name = "rsav"
-version = "2.6.0"
+version = "2.6.3"
 edition = "2024"
 rust-version = "1.85"
 [features]
@@ -34,8 +34,3 @@ serde_json = { version = "1.0", optional = true }
 [build-dependencies]
 embed-resource = "2.5"
 
-[profile.release]
-lto = "thin"
-codegen-units = 1
-strip = "symbols"
-panic = "abort"

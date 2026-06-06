@@ -172,6 +172,7 @@ fn rgb_to_color(c: Rgb) -> Color {
 }
 
 /// Recommendation for minimum terminal size, scaled by DPI.
+#[allow(dead_code)]
 pub fn recommended_min_size(dpi: u32) -> (u16, u16) {
     // 100% DPI => 60x25.  Scale up by DPI for HiDPI displays so the UI is
     // comfortable to read.

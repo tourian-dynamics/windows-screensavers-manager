@@ -115,5 +115,18 @@
       "linux-arch": "https://raw.githubusercontent.com/tourian-dynamics/rScreensavers/main/screensavers/unstable/linux/unstable.pkg.tar.zst"
     },
     "version": "main"
+  },
+  {
+    "name": "fireflies",
+    "author": "UberMetroid",
+    "description": "Harmonious pulsing Lissajous particle orbits with glowing wireframe connector lines, dynamically adjusting to system DWM colors.",
+    "downloads": {
+      "windows": "https://raw.githubusercontent.com/tourian-dynamics/rScreensavers/main/screensavers/fireflies/windows/fireflies.scr",
+      "linux": "https://raw.githubusercontent.com/tourian-dynamics/rScreensavers/main/screensavers/fireflies/linux/fireflies",
+      "linux-deb": "https://raw.githubusercontent.com/tourian-dynamics/rScreensavers/main/screensavers/fireflies/linux/fireflies.deb",
+      "linux-rpm": "https://raw.githubusercontent.com/tourian-dynamics/rScreensavers/main/screensavers/fireflies/linux/fireflies.rpm",
+      "linux-arch": "https://raw.githubusercontent.com/tourian-dynamics/rScreensavers/main/screensavers/fireflies/linux/fireflies.pkg.tar.zst"
+    },
+    "version": "main"
   }
 ]

@@ -114,6 +114,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// clap subcommand names so `rsav.exe /s` works the same as `rsav.exe run`.
 fn pre_munge_args(args: Vec<String>) -> Vec<String> {
     let mut args = args;
+    args.retain(|arg| arg != "--relaunched");
     if args.len() < 2 {
         return args;
     }
@@ -201,6 +202,8 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
         return Err("Interactive TUI requires a TTY stdin.".into());
     }
 
+    win32::relaunch_in_conhost_if_needed();
+
     let _instance_guard = match win32::SingleInstanceGuard::try_new() {
         Ok(g) => g,
         Err(e) => {
@@ -242,6 +245,9 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
     let mut sync_check_timer: u32 = 0;
 
     loop {
+        if app.should_quit {
+            break;
+        }
         app.sync_power_status_if_needed();
 
         // Apply the sleep-inhibition state to the OS.  We only call into
@@ -296,13 +302,13 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
             if reset_state {
                 app.download_state = None;
                 if download_success {
-                    let toast_msg = if post_install.is_some() {
+                    let _toast_msg = if post_install.is_some() {
                         format!("Downloaded package: {} (see status for install cmd)", downloaded_name)
                     } else {
                         format!("Successfully downloaded: {}", downloaded_name)
                     };
                     // Toast disabled to prevent Windows notification from stealing focus from the TUI.
-                    // win32::show_toast_notification("rSaver - Download Completed", &toast_msg);
+                    // win32::show_toast_notification("rSaver - Download Completed", &_toast_msg);
                     win32::log_windows_event(
                         "rSaver",
                         4, // EVENTLOG_INFORMATION_TYPE
@@ -431,17 +437,64 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
                 }
                 Event::Mouse(mouse) => match mouse.kind {
                     event::MouseEventKind::Down(event::MouseButton::Left) => {
-                        app.selection_start = Some((mouse.column, mouse.row));
-                        app.selection_end = Some((mouse.column, mouse.row));
-                        app.selection_pending_copy = false;
+                        let mut clicked_btn = false;
+                        if let Some((btn_y, btn_start, btn_end)) = app.quit_btn_bounds {
+                            if mouse.row == btn_y && mouse.column >= btn_start && mouse.column < btn_end {
+                                app.should_quit = true;
+                                clicked_btn = true;
+                            }
+                        }
+                        if !clicked_btn {
+                            if let Some((btn_y, btn_start, btn_end)) = app.help_btn_bounds {
+                                if mouse.row == btn_y && mouse.column >= btn_start && mouse.column < btn_end {
+                                    app.show_help = !app.show_help;
+                                    app.status = Some(crate::app::StatusMessage {
+                                        text: if app.show_help {
+                                            "Help overlay active. Press ESC/q to close.".to_string()
+                                        } else {
+                                            "Help overlay closed.".to_string()
+                                        },
+                                        kind: crate::app::StatusKind::Info,
+                                    });
+                                    clicked_btn = true;
+                                }
+                            }
+                        }
+                        if !clicked_btn {
+                            if mouse.row <= 2 {
+                                if let Some(cursor_pos) = win32::query_cursor_pos() {
+                                    if let Some(rect) = win32::get_window_rect() {
+                                        app.drag_active = true;
+                                        app.drag_start_cursor = Some(cursor_pos);
+                                        app.drag_start_window = Some((rect.left, rect.top));
+                                    }
+                                }
+                            } else {
+                                app.selection_start = Some((mouse.column, mouse.row));
+                                app.selection_end = Some((mouse.column, mouse.row));
+                                app.selection_pending_copy = false;
+                            }
+                        }
                     }
                     event::MouseEventKind::Drag(event::MouseButton::Left) => {
-                        if app.selection_start.is_some() {
+                        if app.drag_active {
+                            if let (Some(start_cursor), Some(start_window)) = (app.drag_start_cursor, app.drag_start_window) {
+                                if let Some(curr_cursor) = win32::query_cursor_pos() {
+                                    let dx = curr_cursor.0 - start_cursor.0;
+                                    let dy = curr_cursor.1 - start_cursor.1;
+                                    win32::set_window_pos(start_window.0 + dx, start_window.1 + dy);
+                                }
+                            }
+                        } else if app.selection_start.is_some() {
                             app.selection_end = Some((mouse.column, mouse.row));
                         }
                     }
                     event::MouseEventKind::Up(event::MouseButton::Left) => {
-                        if let (Some(start), Some(end)) = (app.selection_start, app.selection_end) {
+                        if app.drag_active {
+                            app.drag_active = false;
+                            app.drag_start_cursor = None;
+                            app.drag_start_window = None;
+                        } else if let (Some(start), Some(end)) = (app.selection_start, app.selection_end) {
                             if start != end {
                                 app.selection_pending_copy = true;
                             } else {

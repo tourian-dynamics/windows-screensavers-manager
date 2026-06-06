@@ -116,6 +116,11 @@ pub struct App {
     pub on_battery: bool,
     /// Last Instant the power/battery status was queried
     pub last_power_check: std::time::Instant,
+    pub quit_btn_bounds: Option<(u16, u16, u16)>,
+    pub help_btn_bounds: Option<(u16, u16, u16)>,
+    pub drag_active: bool,
+    pub drag_start_cursor: Option<(i32, i32)>,
+    pub drag_start_window: Option<(i32, i32)>,
 }
 
 impl App {
@@ -217,6 +222,11 @@ impl App {
             glyphs: crate::win32::GlyphMap::load(),
             on_battery: !crate::win32::query_power_status().ac_online,
             last_power_check: std::time::Instant::now(),
+            quit_btn_bounds: None,
+            help_btn_bounds: None,
+            drag_active: false,
+            drag_start_cursor: None,
+            drag_start_window: None,
         };
         app.update_list_items();
         app

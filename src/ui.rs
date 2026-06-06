@@ -19,7 +19,8 @@ use crate::app::{App, FocusedSection, GlobalField};
 pub fn render(app: &mut App, frame: &mut Frame) {
     let area = frame.area();
     let theme = app.theme;
-    let (min_w, min_h) = crate::theme::recommended_min_size(96);
+    let min_w = 100;
+    let min_h = 35;
 
     if area.width < min_w || area.height < min_h {
         render_too_small(theme, frame, area);
@@ -50,21 +51,76 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let hostname = std::env::var("COMPUTERNAME").unwrap_or_else(|_| "localhost".to_string());
     let os_str = crate::win32::query_os_version();
 
-    let header_line = Line::from(vec![
-        Span::styled(
-            format!(" rSaver v{} ", env!("CARGO_PKG_VERSION")),
-            Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(" │ ", Style::default().fg(theme.border)),
-        Span::styled(
-            "Press h for help",
-            Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(" │ ", Style::default().fg(theme.border)),
-        Span::styled(format!("{}@{}", username, hostname), Style::default().fg(Color::Rgb(255, 215, 0)).add_modifier(Modifier::BOLD)),
-        Span::styled(" │ ", Style::default().fg(theme.border)),
-        Span::styled(os_str, Style::default().fg(theme.text_main)),
-    ]);
+    let ver_str = format!("rSaver v{}", env!("CARGO_PKG_VERSION"));
+    let user_host_str = format!("{}@{}", username, hostname);
+    let os_str_val = os_str;
+
+    let button_y = chunks[0].y + 1;
+    let inner_width = chunks[0].width.saturating_sub(2) as usize;
+    
+    let left_len = ver_str.len() + 3 + user_host_str.len() + 3 + os_str_val.len();
+    let right_len = 6 + 3 + 6; // " help " + " │ " + " quit "
+
+    let header_line = if inner_width > left_len + right_len {
+        let padding_len = inner_width - (left_len + right_len);
+        let padding_str = " ".repeat(padding_len);
+        
+        let help_offset = 1 + left_len + padding_len;
+        let help_start_x = chunks[0].x + help_offset as u16;
+        let help_end_x = help_start_x + 6;
+        app.help_btn_bounds = Some((button_y, help_start_x, help_end_x));
+
+        let quit_offset = help_offset + 6 + 3;
+        let quit_start_x = chunks[0].x + quit_offset as u16;
+        let quit_end_x = quit_start_x + 6;
+        app.quit_btn_bounds = Some((button_y, quit_start_x, quit_end_x));
+
+        Line::from(vec![
+            Span::styled(ver_str, Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD)),
+            Span::styled(" │ ", Style::default().fg(theme.border)),
+            Span::styled(user_host_str, Style::default().fg(Color::Rgb(255, 215, 0)).add_modifier(Modifier::BOLD)),
+            Span::styled(" │ ", Style::default().fg(theme.border)),
+            Span::styled(os_str_val, Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD)),
+            Span::styled(padding_str, Style::default()),
+            // Help button: " help " in yellow background, black text, underlined 'h'
+            Span::styled(" ", Style::default().bg(Color::Rgb(250, 210, 50)).fg(Color::Black).add_modifier(Modifier::BOLD)),
+            Span::styled("h", Style::default().bg(Color::Rgb(250, 210, 50)).fg(Color::Black).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+            Span::styled("elp ", Style::default().bg(Color::Rgb(250, 210, 50)).fg(Color::Black).add_modifier(Modifier::BOLD)),
+            Span::styled(" │ ", Style::default().fg(theme.border)),
+            // Quit button: " quit " in red background, white text, underlined 'q'
+            Span::styled(" ", Style::default().bg(Color::Rgb(255, 85, 85)).fg(Color::White).add_modifier(Modifier::BOLD)),
+            Span::styled("q", Style::default().bg(Color::Rgb(255, 85, 85)).fg(Color::White).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+            Span::styled("uit ", Style::default().bg(Color::Rgb(255, 85, 85)).fg(Color::White).add_modifier(Modifier::BOLD)),
+        ])
+    } else {
+        let help_offset = 1 + ver_str.len() + 3 + user_host_str.len() + 3 + os_str_val.len() + 3;
+        let help_start_x = chunks[0].x + help_offset as u16;
+        let help_end_x = help_start_x + 6;
+        app.help_btn_bounds = Some((button_y, help_start_x, help_end_x));
+
+        let quit_offset = help_offset + 6 + 3;
+        let quit_start_x = chunks[0].x + quit_offset as u16;
+        let quit_end_x = quit_start_x + 6;
+        app.quit_btn_bounds = Some((button_y, quit_start_x, quit_end_x));
+
+        Line::from(vec![
+            Span::styled(ver_str, Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD)),
+            Span::styled(" │ ", Style::default().fg(theme.border)),
+            Span::styled(user_host_str, Style::default().fg(Color::Rgb(255, 215, 0)).add_modifier(Modifier::BOLD)),
+            Span::styled(" │ ", Style::default().fg(theme.border)),
+            Span::styled(os_str_val, Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD)),
+            Span::styled(" │ ", Style::default().fg(theme.border)),
+            // Help button: " help " in yellow background, black text, underlined 'h'
+            Span::styled(" ", Style::default().bg(Color::Rgb(250, 210, 50)).fg(Color::Black).add_modifier(Modifier::BOLD)),
+            Span::styled("h", Style::default().bg(Color::Rgb(250, 210, 50)).fg(Color::Black).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+            Span::styled("elp ", Style::default().bg(Color::Rgb(250, 210, 50)).fg(Color::Black).add_modifier(Modifier::BOLD)),
+            Span::styled(" │ ", Style::default().fg(theme.border)),
+            // Quit button: " quit " in red background, white text, underlined 'q'
+            Span::styled(" ", Style::default().bg(Color::Rgb(255, 85, 85)).fg(Color::White).add_modifier(Modifier::BOLD)),
+            Span::styled("q", Style::default().bg(Color::Rgb(255, 85, 85)).fg(Color::White).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+            Span::styled("uit ", Style::default().bg(Color::Rgb(255, 85, 85)).fg(Color::White).add_modifier(Modifier::BOLD)),
+        ])
+    };
     let header_inner = header_block.inner(chunks[0]);
     frame.render_widget(header_block, chunks[0]);
     frame.render_widget(Paragraph::new(header_line), header_inner);
@@ -437,7 +493,8 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
 fn render_too_small(theme: crate::theme::TuiTheme, frame: &mut Frame, area: Rect) {
     let block = Block::default().borders(Borders::ALL);
-    let (min_w, min_h) = crate::theme::recommended_min_size(96);
+    let min_w = 100;
+    let min_h = 35;
     let text = vec![
         Line::from(Span::styled(
             "Terminal too small",
