@@ -1,6 +1,6 @@
 [package]
 name = "rsav"
-version = "2.0.0"
+version = "2.4.0"
 edition = "2024"
 rust-version = "1.85"
 [features]
@@ -11,6 +11,7 @@ downloader = ["dep:ureq", "dep:serde", "dep:serde_json"]
 ratatui = "0.29"
 crossterm = "0.28"
 winreg = "0.52"
+sysinfo = "0.30"
 clap = { version = "4", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

@@ -22,7 +22,7 @@ use std::time::Duration;
 use clap::{Parser, Subcommand};
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
-use ratatui::crossterm::event::{self, Event, KeyEventKind};
+use ratatui::crossterm::event::{self, Event, KeyEventKind, EnableMouseCapture, DisableMouseCapture};
 use ratatui::crossterm::terminal::LeaveAlternateScreen;
 use tracing::{error, info};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -187,7 +187,8 @@ fn install_panic_hook() {
         let _ = ratatui::crossterm::execute!(
             out,
             LeaveAlternateScreen,
-            ratatui::crossterm::cursor::Show
+            ratatui::crossterm::cursor::Show,
+            DisableMouseCapture
         );
         let _ = out.flush();
         original(info);
@@ -225,7 +226,8 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
     ratatui::crossterm::execute!(
         out,
         ratatui::crossterm::terminal::EnterAlternateScreen,
-        ratatui::crossterm::cursor::Hide
+        ratatui::crossterm::cursor::Hide,
+        EnableMouseCapture
     )?;
 
     let _borderless = BorderlessConsole::enable();
@@ -240,6 +242,8 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
     let mut sync_check_timer: u32 = 0;
 
     loop {
+        app.sync_power_status_if_needed();
+
         // Apply the sleep-inhibition state to the OS.  We only call into
         // Win32 when the desired state changes, so a stationary event loop
         // does no work.
@@ -290,6 +294,16 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
             if reset_state {
                 app.download_state = None;
                 if download_success {
+                    win32::show_toast_notification(
+                        "rSaver - Download Completed",
+                        &format!("Successfully downloaded: {}", downloaded_name),
+                    );
+                    win32::log_windows_event(
+                        "rSaver",
+                        4, // EVENTLOG_INFORMATION_TYPE
+                        1001,
+                        &format!("Successfully downloaded: {}", downloaded_name),
+                    );
                     app.status = Some(crate::app::StatusMessage {
                         text: format!("Downloaded: {}", downloaded_name),
                         kind: crate::app::StatusKind::Info,
@@ -308,6 +322,16 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
                         }
                     }
                 } else if let Some(msg) = err_msg {
+                    win32::show_toast_notification(
+                        "rSaver - Download Failed",
+                        &format!("Failed to download {}: {}", downloaded_name, msg),
+                    );
+                    win32::log_windows_event(
+                        "rSaver",
+                        1, // EVENTLOG_ERROR_TYPE
+                        1002,
+                        &format!("Failed to download {}: {}", downloaded_name, msg),
+                    );
                     app.pending_action = None;
                     app.status = Some(crate::app::StatusMessage {
                         text: format!("Download failed: {}", msg),
@@ -338,7 +362,12 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
         let poll = if is_animating {
             Duration::from_millis(30)
         } else {
-            Duration::from_millis(250)
+            let base = Duration::from_millis(250);
+            if app.on_battery {
+                base * 2
+            } else {
+                base
+            }
         };
 
         let start_time = std::time::Instant::now();
@@ -364,6 +393,35 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
                         tracing::info!(?key.kind, ?key.code, "Ignored non-press key event");
                     }
                 }
+                Event::Mouse(mouse) => match mouse.kind {
+                    event::MouseEventKind::Down(event::MouseButton::Left) => {
+                        app.selection_start = Some((mouse.column, mouse.row));
+                        app.selection_end = Some((mouse.column, mouse.row));
+                        app.selection_pending_copy = false;
+                    }
+                    event::MouseEventKind::Drag(event::MouseButton::Left) => {
+                        if app.selection_start.is_some() {
+                            app.selection_end = Some((mouse.column, mouse.row));
+                        }
+                    }
+                    event::MouseEventKind::Up(event::MouseButton::Left) => {
+                        if let (Some(start), Some(end)) = (app.selection_start, app.selection_end) {
+                            if start != end {
+                                app.selection_pending_copy = true;
+                            } else {
+                                app.selection_start = None;
+                                app.selection_end = None;
+                            }
+                        }
+                    }
+                    event::MouseEventKind::ScrollUp => {
+                        app.handle_key(KeyCode::Up, KeyModifiers::empty());
+                    }
+                    event::MouseEventKind::ScrollDown => {
+                        app.handle_key(KeyCode::Down, KeyModifiers::empty());
+                    }
+                    _ => {}
+                },
                 Event::Resize(w, h) => {
                     tracing::info!(w, h, "Terminal resize event");
                 }
@@ -398,7 +456,8 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
     ratatui::crossterm::execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
-        ratatui::crossterm::cursor::Show
+        ratatui::crossterm::cursor::Show,
+        DisableMouseCapture
     )?;
     Ok(())
 }
@@ -605,6 +664,13 @@ fn run_doctor(fix: bool) -> Result<(), Box<dyn std::error::Error>> {
         .open(&log_path)
     {
         Ok(_) => println!("OK ({:?})", log_path),
+        Err(e) => println!("FAILED (Error: {})", e),
+    }
+
+    // 4.5 Clipboard Write Access
+    print!("Windows Clipboard:        ");
+    match win32::copy_text_to_clipboard("rSaver Diagnostic Test Connection") {
+        Ok(_) => println!("OK (Writable)"),
         Err(e) => println!("FAILED (Error: {})", e),
     }
 

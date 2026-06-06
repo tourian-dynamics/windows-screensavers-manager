@@ -1,10 +1,4 @@
-```text
-         _____                               
-   _____/ ___/____ __   _____  _____         
-  / ___/\__ \/ __ `/ | / / _ \/ ___/         
- / /   ___/ / /_/ /| |/ /  __/ /             
-/_/   /____/\__,_/ |___/\___/_/              
-```
+# rSaver Support & Troubleshooting
 
 If it detects missing directories, incorrect screensaver files, or out-of-sync registry settings, you can instruct rSaver to heal itself automatically:
 
@@ -14,7 +8,7 @@ rsav doctor --fix
 
 ---
 
-## 📄 Step 2: Check the Logs
+## Step 2: Check the Logs
 
 rSaver logs all events, system metrics, and download status to a background log file. This file contains valuable context if the application crashed or if a download failed.
 
@@ -26,7 +20,7 @@ rSaver logs all events, system metrics, and download status to a background log 
 
 ---
 
-## 💬 Step 3: Open an Issue
+## Step 3: Open an Issue
 
 If the doctor tool did not resolve your issue and you found an error in the logs, please open an issue in the official repository:
 

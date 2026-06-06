@@ -51,7 +51,15 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let os_str = crate::win32::query_os_version();
 
     let header_line = Line::from(vec![
-        Span::styled(" rSaver ", Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format!(" rSaver v{} ", env!("CARGO_PKG_VERSION")),
+            Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(" │ ", Style::default().fg(theme.border)),
+        Span::styled(
+            "Press ? for help",
+            Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" │ ", Style::default().fg(theme.border)),
         Span::styled(format!("{}@{}", username, hostname), Style::default().fg(Color::Rgb(255, 215, 0)).add_modifier(Modifier::BOLD)),
         Span::styled(" │ ", Style::default().fg(theme.border)),
@@ -146,11 +154,12 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             Span::styled(format!(" {:>3.0}%", progress * 100.0), Style::default().fg(theme.accent_secondary)),
         ]))
     } else if let Some(ref status) = app.status {
-        let color = match status.kind {
-            crate::app::StatusKind::Info => theme.accent_primary,
-            crate::app::StatusKind::Error => theme.missing,
+        let (color, icon) = match status.kind {
+            crate::app::StatusKind::Info => (theme.accent_primary, app.glyphs.info),
+            crate::app::StatusKind::Error => (theme.missing, app.glyphs.status_err),
         };
         Paragraph::new(Line::from(vec![
+            Span::styled(format!("{} ", icon), Style::default().fg(color)),
             Span::styled(&status.text, Style::default().fg(color).add_modifier(Modifier::BOLD)),
         ]))
     } else {
@@ -161,11 +170,12 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
     #[cfg(not(feature = "downloader"))]
     let footer_p = if let Some(ref status) = app.status {
-        let color = match status.kind {
-            crate::app::StatusKind::Info => theme.accent_primary,
-            crate::app::StatusKind::Error => theme.missing,
+        let (color, icon) = match status.kind {
+            crate::app::StatusKind::Info => (theme.accent_primary, app.glyphs.info),
+            crate::app::StatusKind::Error => (theme.missing, app.glyphs.status_err),
         };
         Paragraph::new(Line::from(vec![
+            Span::styled(format!("{} ", icon), Style::default().fg(color)),
             Span::styled(&status.text, Style::default().fg(color).add_modifier(Modifier::BOLD)),
         ]))
     } else {
@@ -177,6 +187,228 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let footer_inner = footer_block.inner(chunks[3]);
     frame.render_widget(footer_block, chunks[3]);
     frame.render_widget(footer_p, footer_inner);
+
+    // Handle Mouse Selection Highlights & Clipboard Copy
+    if let (Some(start), Some(end)) = (app.selection_start, app.selection_end) {
+        let buf = frame.buffer_mut();
+        let width = buf.area.width;
+        let height = buf.area.height;
+
+        let (col1, row1) = start;
+        let (col2, row2) = end;
+
+        let is_selected = |x: u16, y: u16| -> bool {
+            let (c1, r1) = (col1, row1);
+            let (c2, r2) = (col2, row2);
+            if r1 == r2 {
+                y == r1 && x >= c1.min(c2) && x <= c1.max(c2)
+            } else if r1 < r2 {
+                (y == r1 && x >= c1) || (y > r1 && y < r2) || (y == r2 && x <= c2)
+            } else {
+                (y == r2 && x >= c2) || (y > r2 && y < r1) || (y == r1 && x <= c1)
+            }
+        };
+
+        // 1. Draw Highlight
+        for y in 0..height {
+            for x in 0..width {
+                if is_selected(x, y) {
+                    let cell = &mut buf[(x, y)];
+                    cell.set_bg(Color::Rgb(0, 120, 215));
+                    cell.set_fg(Color::White);
+                }
+            }
+        }
+
+        // 2. Perform Copy on Release
+        if app.selection_pending_copy {
+            let mut selected_text = String::new();
+            let mut current_row: Option<u16> = None;
+            let mut current_line = String::new();
+
+            for y in 0..height {
+                for x in 0..width {
+                    if is_selected(x, y) {
+                        let cell = &buf[(x, y)];
+                        if current_row != Some(y) {
+                            if current_row.is_some() {
+                                selected_text.push_str(current_line.trim_end());
+                                selected_text.push('\n');
+                                current_line.clear();
+                            }
+                            current_row = Some(y);
+                        }
+                        current_line.push_str(cell.symbol());
+                    }
+                }
+            }
+            if !current_line.is_empty() {
+                selected_text.push_str(current_line.trim_end());
+            }
+
+            if !selected_text.is_empty() {
+                let _ = crate::win32::copy_text_to_clipboard(&selected_text);
+                let truncated = if selected_text.len() > 30 {
+                    format!("{}...", &selected_text[..27].replace('\n', " "))
+                } else {
+                    selected_text.replace('\n', " ")
+                };
+                app.status = Some(crate::app::StatusMessage {
+                    text: format!("{} Copied selection to clipboard: {}", app.glyphs.clipboard, truncated),
+                    kind: crate::app::StatusKind::Info,
+                });
+            }
+
+            app.selection_start = None;
+            app.selection_end = None;
+            app.selection_pending_copy = false;
+        }
+    }
+
+    // 5. Scrollable Markdown Document Viewer Modal
+    if let Some(ref filename) = app.show_markdown {
+        let area = centered_rect(85, 80, frame.area());
+        let popup_block = Block::default()
+            .title(format!(
+                " Document Viewer: {} (Press Esc/q to Close) ",
+                filename
+            ))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.accent_primary));
+
+        // Render text lines scrollable
+        let paragraph = Paragraph::new(app.markdown_lines.clone())
+            .block(popup_block)
+            .wrap(ratatui::widgets::Wrap { trim: true })
+            .alignment(ratatui::layout::Alignment::Left)
+            .scroll((app.markdown_scroll as u16, 0));
+
+        frame.render_widget(Clear, area);
+        frame.render_widget(paragraph, area);
+    }
+
+    // 6. Help Shortcuts Overlay Modal
+    if app.show_help {
+        let area = centered_rect(65, 75, frame.area());
+        let popup_block = Block::default()
+            .title(" Keyboard Shortcuts & TUI Commands ")
+            .title_style(
+                Style::default()
+                    .fg(theme.accent_primary)
+                    .add_modifier(Modifier::BOLD),
+            )
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.accent_primary));
+
+        let key_col_width = 18;
+        let border_padding = 2;
+        let total_inner_width = area.width.saturating_sub(border_padding);
+        let max_desc_width = (total_inner_width as usize)
+            .saturating_sub(key_col_width)
+            .saturating_sub(2); // for ": "
+
+        let mut help_text = Vec::new();
+        help_text.push(Line::from(""));
+
+        help_text.extend(format_help_row(
+            "Tab / Shift-Tab",
+            "Cycle active panel focus",
+            max_desc_width,
+            &theme,
+        ));
+        help_text.extend(format_help_row(
+            "Up / Down",
+            "Navigate lists and preference fields",
+            max_desc_width,
+            &theme,
+        ));
+        help_text.extend(format_help_row(
+            "Left / Right",
+            "Adjust settings and toggle flags",
+            max_desc_width,
+            &theme,
+        ));
+        help_text.extend(format_help_row(
+            "Space / Enter",
+            "Toggle screensaver selection / Apply settings",
+            max_desc_width,
+            &theme,
+        ));
+        help_text.extend(format_help_row(
+            "p / t",
+            "Preview highlighted screensaver",
+            max_desc_width,
+            &theme,
+        ));
+        help_text.extend(format_help_row(
+            "c / C",
+            "Configure highlighted screensaver",
+            max_desc_width,
+            &theme,
+        ));
+        help_text.extend(format_help_row(
+            "d / D",
+            "Delete downloaded screensaver from list",
+            max_desc_width,
+            &theme,
+        ));
+        help_text.extend(format_help_row(
+            "r / F5",
+            "Refresh screensavers list",
+            max_desc_width,
+            &theme,
+        ));
+        help_text.extend(format_help_row(
+            "Esc / q",
+            "Close dialogs / Help Overlay, or Quit application",
+            max_desc_width,
+            &theme,
+        ));
+        help_text.extend(format_help_row(
+            "? / h",
+            "Toggle this help shortcut overlay modal",
+            max_desc_width,
+            &theme,
+        ));
+
+        help_text.push(Line::from(""));
+        help_text.extend(format_help_row(
+            "F1",
+            "View README.md document",
+            max_desc_width,
+            &theme,
+        ));
+        help_text.extend(format_help_row(
+            "F2",
+            "View SUPPORT.md document",
+            max_desc_width,
+            &theme,
+        ));
+        help_text.extend(format_help_row(
+            "F3",
+            "View LICENSE.md document",
+            max_desc_width,
+            &theme,
+        ));
+        help_text.extend(format_help_row(
+            "F4",
+            "View COPYRIGHT.md document",
+            max_desc_width,
+            &theme,
+        ));
+
+        help_text.push(Line::from(""));
+        help_text.extend(format_help_row(
+            "CLI Subcommands",
+            "rsav.exe [tui | run | stop | toggle-active | lock | configure | preview | doctor]",
+            max_desc_width,
+            &theme,
+        ));
+
+        frame.render_widget(Clear, area);
+        let paragraph = Paragraph::new(help_text).block(popup_block);
+        frame.render_widget(paragraph, area);
+    }
 }
 
 fn render_too_small(theme: crate::theme::TuiTheme, frame: &mut Frame, area: Rect) {
@@ -230,7 +462,7 @@ fn render_prefs(app: &mut App, frame: &mut Frame, area: Rect) {
 
     let mut add_field = |field: GlobalField, label: &str, value: String, value_color: Color| {
         let focused = active && app.global_field == field;
-        let arrow_span = Span::styled(if focused { " ▶ " } else { "   " }, Style::default().fg(theme.accent_primary));
+        let arrow_span = Span::styled(if focused { app.glyphs.play } else { "   " }, Style::default().fg(theme.accent_primary));
         let label_style = if focused {
             Style::default().fg(theme.accent_secondary).add_modifier(Modifier::BOLD)
         } else {
@@ -381,7 +613,7 @@ fn render_list(app: &mut App, frame: &mut Frame, area: Rect) {
                 .bg(theme.bg)
                 .add_modifier(Modifier::BOLD),
         )
-        .highlight_symbol(if active { " ▶ " } else { " ▷ " });
+        .highlight_symbol(if active { app.glyphs.play } else { app.glyphs.play_empty });
     frame.render_stateful_widget(list, list_chunks[1], &mut state);
 }
 
@@ -393,4 +625,101 @@ pub fn truncate(s: &str, max: usize) -> String {
         out.push('…');
         out
     }
+}
+
+fn centered_rect(
+    percent_x: u16,
+    percent_y: u16,
+    r: ratatui::layout::Rect,
+) -> ratatui::layout::Rect {
+    use ratatui::layout::{Constraint, Direction, Layout};
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
+}
+
+fn format_help_row(
+    key: &str,
+    description: &str,
+    max_desc_width: usize,
+    theme: &crate::theme::TuiTheme,
+) -> Vec<Line<'static>> {
+    let wrapped = wrap_text(description, max_desc_width);
+    let mut lines = Vec::new();
+
+    let key_col_width = 18;
+    let key_str = format!("  {:<15} ", key);
+
+    if wrapped.is_empty() {
+        lines.push(Line::from(vec![
+            Span::styled(
+                key_str,
+                Style::default()
+                    .fg(theme.accent_primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(": ", Style::default().fg(theme.text_main)),
+        ]));
+    } else {
+        for (i, chunk) in wrapped.into_iter().enumerate() {
+            if i == 0 {
+                lines.push(Line::from(vec![
+                    Span::styled(
+                        key_str.clone(),
+                        Style::default()
+                            .fg(theme.accent_primary)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(": ", Style::default().fg(theme.text_main)),
+                    Span::styled(chunk, Style::default().fg(theme.text_main)),
+                ]));
+            } else {
+                let padding = " ".repeat(key_col_width + 2);
+                lines.push(Line::from(vec![
+                    Span::styled(padding, Style::default().fg(theme.text_main)),
+                    Span::styled(chunk, Style::default().fg(theme.text_main)),
+                ]));
+            }
+        }
+    }
+    lines
+}
+
+fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    if max_width == 0 {
+        return vec![text.to_string()];
+    }
+    for paragraph in text.split('\n') {
+        let mut current_line = String::new();
+        for word in paragraph.split_whitespace() {
+            if current_line.is_empty() {
+                current_line.push_str(word);
+            } else if current_line.len() + 1 + word.len() <= max_width {
+                current_line.push(' ');
+                current_line.push_str(word);
+            } else {
+                lines.push(current_line);
+                current_line = word.to_string();
+            }
+        }
+        if !current_line.is_empty() {
+            lines.push(current_line);
+        }
+    }
+    lines
 }

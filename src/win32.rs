@@ -292,7 +292,8 @@ fn query_accent_color() -> Rgb {
     Rgb::from_argb(color)
 }
 
-fn query_power_status() -> PowerStatus {
+/// Query system battery life and charging source.
+pub fn query_power_status() -> PowerStatus {
     let mut s: SYSTEM_POWER_STATUS = unsafe { std::mem::zeroed() };
     let ok = unsafe { GetSystemPowerStatus(&mut s) };
     if ok == 0 {
@@ -553,3 +554,229 @@ pub fn query_os_version() -> String {
     }
     parts.join(" ")
 }
+
+#[link(name = "user32")]
+unsafe extern "system" {
+    fn OpenClipboard(h_wnd_new_owner: *mut std::ffi::c_void) -> i32;
+    fn EmptyClipboard() -> i32;
+    fn SetClipboardData(u_format: u32, h_mem: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+    fn CloseClipboard() -> i32;
+}
+
+#[link(name = "kernel32")]
+unsafe extern "system" {
+    fn GlobalAlloc(u_flags: u32, dw_bytes: usize) -> *mut std::ffi::c_void;
+    fn GlobalLock(h_mem: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+    fn GlobalUnlock(h_mem: *mut std::ffi::c_void) -> i32;
+    fn GlobalFree(h_mem: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+}
+
+/// Copy text to the Windows Clipboard.
+pub fn copy_text_to_clipboard(text: &str) -> std::io::Result<()> {
+    unsafe {
+        use std::ptr;
+        if OpenClipboard(ptr::null_mut()) == 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+        if EmptyClipboard() == 0 {
+            let _ = CloseClipboard();
+            return Err(std::io::Error::last_os_error());
+        }
+
+        let text_w: Vec<u16> = text.encode_utf16().chain(std::iter::once(0)).collect();
+        let len = text_w.len() * 2;
+        let h_mem = GlobalAlloc(0x0002, len); // GMEM_MOVEABLE = 0x0002
+        if h_mem.is_null() {
+            let _ = CloseClipboard();
+            return Err(std::io::Error::last_os_error());
+        }
+
+        let ptr = GlobalLock(h_mem);
+        if ptr.is_null() {
+            let _ = GlobalFree(h_mem);
+            let _ = CloseClipboard();
+            return Err(std::io::Error::last_os_error());
+        }
+
+        std::ptr::copy_nonoverlapping(text_w.as_ptr(), ptr as *mut u16, text_w.len());
+        GlobalUnlock(h_mem);
+
+        if SetClipboardData(13, h_mem).is_null() {
+            // CF_UNICODETEXT = 13
+            let _ = GlobalFree(h_mem);
+            let _ = CloseClipboard();
+            return Err(std::io::Error::last_os_error());
+        }
+
+        CloseClipboard();
+    }
+    Ok(())
+}
+
+/// Query process hierarchy to detect active Shell and Terminal Emulator.
+pub fn query_shell_and_terminal() -> (String, String) {
+    let mut shell = "Unknown Shell".to_string();
+    let mut terminal = "Unknown Terminal".to_string();
+
+    #[cfg(windows)]
+    {
+        use sysinfo::System;
+        let mut sys = System::new_all();
+        sys.refresh_all();
+
+        let mut current_pid = sysinfo::get_current_pid().ok();
+        let mut depth = 0;
+
+        while let Some(pid) = current_pid {
+            if depth > 12 {
+                break;
+            }
+            if let Some(process) = sys.process(pid) {
+                let name = process.name().to_lowercase();
+                if shell == "Unknown Shell" {
+                    if name.contains("powershell") || name.contains("pwsh") {
+                        shell = "PowerShell".to_string();
+                    } else if name == "cmd.exe" || name == "cmd" {
+                        shell = "CMD".to_string();
+                    } else if name.contains("bash") || name.contains("sh") || name.contains("zsh") {
+                        shell = name.replace(".exe", "");
+                    }
+                }
+
+                if terminal == "Unknown Terminal" {
+                    if name.contains("windowsterminal") || name == "openconsole.exe" {
+                        terminal = "Windows Terminal".to_string();
+                    } else if name.contains("code") {
+                        terminal = "VS Code Terminal".to_string();
+                    } else if name.contains("alacritty") {
+                        terminal = "Alacritty".to_string();
+                    } else if name.contains("wezterm") {
+                        terminal = "WezTerm".to_string();
+                    } else if name.contains("conhost") {
+                        terminal = "Windows Console Host".to_string();
+                    }
+                }
+
+                current_pid = process.parent();
+                depth += 1;
+            } else {
+                break;
+            }
+        }
+    }
+
+    (shell, terminal)
+}
+
+#[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
+pub struct GlyphMap {
+    pub status_ok: &'static str,
+    pub status_err: &'static str,
+    pub info: &'static str,
+    pub warning: &'static str,
+    pub clipboard: &'static str,
+    pub play: &'static str,
+    pub play_empty: &'static str,
+}
+
+impl GlyphMap {
+    pub fn load() -> Self {
+        let (_, terminal) = query_shell_and_terminal();
+        if terminal == "Windows Console Host" {
+            Self {
+                status_ok: "[OK]",
+                status_err: "[ERR]",
+                info: "[i]",
+                warning: "[!]",
+                clipboard: "[CLIP]",
+                play: " > ",
+                play_empty: " - ",
+            }
+        } else {
+            Self {
+                status_ok: "✔️",
+                status_err: "❌",
+                info: "ℹ️",
+                warning: "⚠️",
+                clipboard: "📋",
+                play: " ▶ ",
+                play_empty: " ▷ ",
+            }
+        }
+    }
+}
+
+/// Trigger a native Windows Toast Notification using a PowerShell/WinRT shim.
+pub fn show_toast_notification(title: &str, message: &str) {
+    let script = format!(
+        "[void] [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]; \
+         [void] [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime]; \
+         $el = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); \
+         $el.GetElementsByTagName('text').Item(0).InnerText = '{}'; \
+         $el.GetElementsByTagName('text').Item(1).InnerText = '{}'; \
+         $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('rsav'); \
+         $notifier.Show($el)",
+        title.replace('\'', "''"),
+        message.replace('\'', "''")
+    );
+
+    // Spawn powershell in the background to avoid blocking the main TUI thread.
+    let _ = std::process::Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &script])
+        .spawn();
+}
+
+#[cfg(windows)]
+#[link(name = "advapi32")]
+unsafe extern "system" {
+    fn RegisterEventSourceW(
+        lp_unc_server_name: *const u16,
+        lp_source_name: *const u16,
+    ) -> *mut std::ffi::c_void;
+
+    fn ReportEventW(
+        h_event_log: *mut std::ffi::c_void,
+        w_type: u16,
+        w_category: u16,
+        dw_event_id: u32,
+        lp_user_sid: *mut std::ffi::c_void,
+        w_num_strings: u16,
+        dw_data_size: u32,
+        lp_strings: *const *const u16,
+        lp_raw_data: *mut std::ffi::c_void,
+    ) -> i32;
+
+    fn DeregisterEventSource(h_event_log: *mut std::ffi::c_void) -> i32;
+}
+
+/// Write a record directly to the native Windows Event Log under Application.
+pub fn log_windows_event(source_name: &str, event_type: u16, event_id: u32, message: &str) {
+    #[cfg(windows)]
+    unsafe {
+        let source_w: Vec<u16> = source_name
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        let handle = RegisterEventSourceW(std::ptr::null(), source_w.as_ptr());
+        if !handle.is_null() {
+            let message_w: Vec<u16> = message.encode_utf16().chain(std::iter::once(0)).collect();
+            let strings: [*const u16; 1] = [message_w.as_ptr()];
+
+            ReportEventW(
+                handle,
+                event_type,
+                0, // category
+                event_id,
+                std::ptr::null_mut(), // user sid
+                1,                    // num strings
+                0,                    // data size
+                strings.as_ptr(),
+                std::ptr::null_mut(), // raw data
+            );
+            DeregisterEventSource(handle);
+        }
+    }
+}
+
+

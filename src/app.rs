@@ -18,6 +18,11 @@ use crate::config::{GlobalConfig, LocalConfig};
 use crate::preview::Screensaver;
 use crate::theme::TuiTheme;
 
+const README_CONTENT: &str = include_str!("../README.md");
+const SUPPORT_CONTENT: &str = include_str!("../SUPPORT.md");
+const LICENSE_CONTENT: &str = include_str!("../LICENSE.md");
+const COPYRIGHT_CONTENT: &str = include_str!("../COPYRIGHT.md");
+
 const TIMEOUT_STEP_SECS: u32 = 60;
 const TIMEOUT_MIN_SECS: u32 = 60;
 const TIMEOUT_MAX_SECS: u32 = 7200;
@@ -95,6 +100,19 @@ pub struct App {
     pub registry_entries: Vec<crate::downloader::RegistryEntry>,
     #[cfg(feature = "downloader")]
     pub pending_action: Option<PendingAction>,
+    pub show_help: bool,
+    pub selection_start: Option<(u16, u16)>,
+    pub selection_end: Option<(u16, u16)>,
+    pub selection_pending_copy: bool,
+    pub show_markdown: Option<String>,
+    pub markdown_lines: Vec<ratatui::text::Line<'static>>,
+    pub markdown_scroll: usize,
+    /// Loaded terminal character fallbacks (Adaptive Emoji/Glyph fallback)
+    pub glyphs: crate::win32::GlyphMap,
+    /// Whether the computer is currently running on battery power (Throttling)
+    pub on_battery: bool,
+    /// Last Instant the power/battery status was queried
+    pub last_power_check: std::time::Instant,
 }
 
 impl App {
@@ -161,6 +179,16 @@ impl App {
             registry_entries: Vec::new(),
             #[cfg(feature = "downloader")]
             pending_action: None,
+            selection_start: None,
+            selection_end: None,
+            selection_pending_copy: false,
+            show_help: false,
+            show_markdown: None,
+            markdown_lines: Vec::new(),
+            markdown_scroll: 0,
+            glyphs: crate::win32::GlyphMap::load(),
+            on_battery: !crate::win32::query_power_status().ac_online,
+            last_power_check: std::time::Instant::now(),
         };
         app.update_list_items();
         app
@@ -747,6 +775,76 @@ impl App {
             return true;
         }
 
+        if self.show_help {
+            match code {
+                KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc | KeyCode::Char('?') | KeyCode::Char('h') => {
+                    self.show_help = false;
+                    self.status = Some(StatusMessage {
+                        text: "Help overlay closed.".to_string(),
+                        kind: StatusKind::Info,
+                    });
+                }
+                KeyCode::F(1) => {
+                    self.show_help = false;
+                    self.open_embedded_markdown("README.md", README_CONTENT);
+                }
+                KeyCode::F(2) => {
+                    self.show_help = false;
+                    self.open_embedded_markdown("SUPPORT.md", SUPPORT_CONTENT);
+                }
+                KeyCode::F(3) => {
+                    self.show_help = false;
+                    self.open_embedded_markdown("LICENSE.md", LICENSE_CONTENT);
+                }
+                KeyCode::F(4) => {
+                    self.show_help = false;
+                    self.open_embedded_markdown("COPYRIGHT.md", COPYRIGHT_CONTENT);
+                }
+                _ => {}
+            }
+            return false;
+        }
+
+        if self.show_markdown.is_some() {
+            match code {
+                KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => {
+                    self.show_markdown = None;
+                }
+                KeyCode::F(1) => {
+                    self.open_embedded_markdown("README.md", README_CONTENT);
+                }
+                KeyCode::F(2) => {
+                    self.open_embedded_markdown("SUPPORT.md", SUPPORT_CONTENT);
+                }
+                KeyCode::F(3) => {
+                    self.open_embedded_markdown("LICENSE.md", LICENSE_CONTENT);
+                }
+                KeyCode::F(4) => {
+                    self.open_embedded_markdown("COPYRIGHT.md", COPYRIGHT_CONTENT);
+                }
+                KeyCode::Up => {
+                    self.markdown_scroll = self.markdown_scroll.saturating_sub(1);
+                }
+                KeyCode::Down => {
+                    if self.markdown_scroll + 10 < self.markdown_lines.len() {
+                        self.markdown_scroll += 1;
+                    }
+                }
+                KeyCode::PageUp => {
+                    self.markdown_scroll = self.markdown_scroll.saturating_sub(15);
+                }
+                KeyCode::PageDown => {
+                    if self.markdown_scroll + 15 < self.markdown_lines.len() {
+                        self.markdown_scroll += 15;
+                    } else {
+                        self.markdown_scroll = self.markdown_lines.len().saturating_sub(10);
+                    }
+                }
+                _ => {}
+            }
+            return false;
+        }
+
         match code {
             KeyCode::Char('q') | KeyCode::Esc => return true,
             KeyCode::F(5) | KeyCode::Char('r') | KeyCode::Char('R') => self.refresh_screensavers(),
@@ -769,9 +867,22 @@ impl App {
                     self.delete_highlighted();
                 }
             }
-            KeyCode::Char('?') | KeyCode::Char('h') | KeyCode::Char('H') | KeyCode::F(1) => {
+            KeyCode::F(1) => {
+                self.open_embedded_markdown("README.md", README_CONTENT);
+            }
+            KeyCode::F(2) => {
+                self.open_embedded_markdown("SUPPORT.md", SUPPORT_CONTENT);
+            }
+            KeyCode::F(3) => {
+                self.open_embedded_markdown("LICENSE.md", LICENSE_CONTENT);
+            }
+            KeyCode::F(4) => {
+                self.open_embedded_markdown("COPYRIGHT.md", COPYRIGHT_CONTENT);
+            }
+            KeyCode::Char('?') | KeyCode::Char('h') | KeyCode::Char('H') => {
+                self.show_help = true;
                 self.status = Some(StatusMessage {
-                    text: "Help shortcuts are always visible in the top-right panel.".to_string(),
+                    text: "Help overlay active. Press ESC/q to close.".to_string(),
                     kind: StatusKind::Info,
                 });
             }
@@ -910,6 +1021,150 @@ fn is_uninstall(p: &std::path::Path) -> bool {
         .map(str::to_lowercase)
         .map(|n| n.contains("uninstall"))
         .unwrap_or(false)
+}
+
+impl App {
+    /// Load and open an embedded markdown document in the viewer modal.
+    pub fn open_embedded_markdown(&mut self, title: &str, content: &str) {
+        self.markdown_lines = parse_markdown_to_lines(content, &self.theme);
+        self.show_markdown = Some(title.to_string());
+        self.markdown_scroll = 0;
+        self.status = Some(StatusMessage {
+            text: format!("Opened document: {}", title),
+            kind: StatusKind::Info,
+        });
+    }
+
+    /// Checks system power status periodically and adjusts throttling state.
+    pub fn sync_power_status_if_needed(&mut self) {
+        if self.last_power_check.elapsed() > std::time::Duration::from_millis(5000) {
+            self.last_power_check = std::time::Instant::now();
+            let power = crate::win32::query_power_status();
+            let current_on_battery = !power.ac_online;
+            if current_on_battery != self.on_battery {
+                self.on_battery = current_on_battery;
+                let state = if current_on_battery {
+                    "Battery (Power-Saving Throttling Enabled)"
+                } else {
+                    "AC Power (Full Speed)"
+                };
+                tracing::info!("Power source changed. Status: {}", state);
+                self.status = Some(StatusMessage {
+                    text: format!("Power Source Changed: {}", state),
+                    kind: StatusKind::Info,
+                });
+            }
+        }
+    }
+}
+
+fn parse_markdown_to_lines(content: &str, theme: &TuiTheme) -> Vec<ratatui::text::Line<'static>> {
+    use ratatui::style::{Color, Modifier, Style};
+    use ratatui::text::{Line, Span};
+
+    let mut lines = Vec::new();
+    let mut in_code_block = false;
+    let mut current_paragraph = String::new();
+
+    let flush_paragraph = |para: &mut String, lines: &mut Vec<Line<'static>>| {
+        if !para.is_empty() {
+            lines.push(Line::from(Span::styled(
+                para.clone(),
+                Style::default().fg(theme.text_main),
+            )));
+            para.clear();
+        }
+    };
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("```") {
+            flush_paragraph(&mut current_paragraph, &mut lines);
+            in_code_block = !in_code_block;
+            continue;
+        }
+
+        if in_code_block {
+            lines.push(Line::from(Span::styled(
+                line.to_string(),
+                Style::default().fg(Color::Rgb(150, 240, 150)),
+            )));
+            continue;
+        }
+
+        if trimmed.is_empty() {
+            flush_paragraph(&mut current_paragraph, &mut lines);
+            lines.push(Line::from(""));
+            continue;
+        }
+
+        if trimmed.starts_with("# ") {
+            flush_paragraph(&mut current_paragraph, &mut lines);
+            let header = trimmed[2..].to_string();
+            lines.push(Line::from(""));
+            lines.push(Line::from(Span::styled(
+                format!("=== {} ===", header.to_uppercase()),
+                Style::default()
+                    .fg(theme.accent_primary)
+                    .add_modifier(Modifier::BOLD),
+            )));
+            lines.push(Line::from(""));
+        } else if trimmed.starts_with("## ") {
+            flush_paragraph(&mut current_paragraph, &mut lines);
+            let header = trimmed[3..].to_string();
+            lines.push(Line::from(""));
+            lines.push(Line::from(Span::styled(
+                format!("--- {} ---", header),
+                Style::default()
+                    .fg(theme.accent_primary)
+                    .add_modifier(Modifier::BOLD),
+            )));
+            lines.push(Line::from(""));
+        } else if trimmed.starts_with("### ") {
+            flush_paragraph(&mut current_paragraph, &mut lines);
+            let header = trimmed[4..].to_string();
+            lines.push(Line::from(Span::styled(
+                header,
+                Style::default().fg(theme.accent_primary),
+            )));
+        } else if trimmed.starts_with("* ") {
+            flush_paragraph(&mut current_paragraph, &mut lines);
+            let item = trimmed[2..].to_string();
+            lines.push(Line::from(vec![
+                Span::styled(" • ", Style::default().fg(theme.accent_primary)),
+                Span::styled(item, Style::default().fg(theme.text_main)),
+            ]));
+        } else if trimmed.starts_with("- ") {
+            flush_paragraph(&mut current_paragraph, &mut lines);
+            let item = trimmed[2..].to_string();
+            lines.push(Line::from(vec![
+                Span::styled(" • ", Style::default().fg(theme.accent_primary)),
+                Span::styled(item, Style::default().fg(theme.text_main)),
+            ]));
+        } else if trimmed.starts_with("1. ")
+            || trimmed.starts_with("2. ")
+            || trimmed.starts_with("3. ")
+            || trimmed.starts_with("4. ")
+            || trimmed.starts_with("5. ")
+        {
+            flush_paragraph(&mut current_paragraph, &mut lines);
+            lines.push(Line::from(vec![
+                Span::styled(
+                    format!("  {} ", &trimmed[..3]),
+                    Style::default().fg(theme.accent_primary),
+                ),
+                Span::styled(trimmed[3..].to_string(), Style::default().fg(theme.text_main)),
+            ]));
+        } else {
+            if !current_paragraph.is_empty() {
+                current_paragraph.push(' ');
+            }
+            current_paragraph.push_str(trimmed);
+        }
+    }
+
+    flush_paragraph(&mut current_paragraph, &mut lines);
+    lines
 }
 
 

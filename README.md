@@ -1,15 +1,4 @@
-```text
-         _____                               
-   _____/ ___/____ __   _____  _____         
-  / ___/\__ \/ __ `/ | / / _ \/ ___/         
- / /   ___/ / /_/ /| |/ /  __/ /             
-/_/   /____/\__,_/ |___/\___/_/              
-```
-
-┌──────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  rSaver  │  user@COMPUTERNAME  │  Windows 11 Pro 25H2 (Build 26200)                                      │
-├──────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-```
+# rSaver - Windows Screensaver Manager
 
 You can install `rSaver` globally via the Windows Package Manager (WinGet):
 ```powershell
@@ -18,10 +7,10 @@ winget install TourianDynamics.rsav
 
 ---
 
-## 🆕 What's New in v2.0 (Unified Release)
+## What's New in v2.0 (Unified Release)
 This release aligns the visual styling, interfaces, and experience of `rSaver` and `rMonitor` under a unified dashboard design system:
 * **Standardized Borders**: Separate bordered blocks for each UI section, removing the outer screen-wide border.
-* **Unified Title Bar**: Standardized header layout displaying `[App Name] │ [user@host] │ [OS & Build]`.
+* **Unified Title Bar**: Standardized header layout displaying `[App Name]  [user@host]  [OS & Build]`.
 * **Standard Text Selection**: Restored terminal text selection by disabling raw crossterm mouse capture.
 * **Console Tab Titles**: Sets the active tab title to `"rSav"` on startup and restores it upon exit.
 * **Clean Status Bar**: Bottom status bar has a matching accent-colored `" Status "` border title and clean, bold-colored feedback messages (status light dot removed).
@@ -29,7 +18,7 @@ This release aligns the visual styling, interfaces, and experience of `rSaver` a
 
 ---
 
-## 🚀 What rSaver Does
+## What rSaver Does
 `rSaver` manages the native Windows Screen Saver system by bridging standard OS-level registry settings with modern terminal-based configuration. Key capabilities include:
 *   **Automatic Discovery**: Scans Windows system folders (`System32`, `SysWOW64`, etc.) and a dedicated user folder in `%APPDATA%\rSaver\screensavers` for `.scr` executables.
 *   **Config Sync Alerts (Out-of-Sync Detection)**: Automatically monitors registry changes in the background and hot-reloads `rSaver` if the system screensaver is modified externally (e.g., via the native Windows Settings).
@@ -39,7 +28,7 @@ This release aligns the visual styling, interfaces, and experience of `rSaver` a
 
 ---
 
-## 🖥️ Curated Screensaver Collection
+## Curated Screensaver Collection
 `rSaver` comes integrated with a catalog of retro terminal-style screensavers optimized for Windows 11:
 *   **`win-beams.scr`**: Colorful sweeping spotlight beams bouncing off terminal walls.
 *   **`win-bhop.scr`**: Animated cyber-themed scrolling panels.
@@ -49,7 +38,7 @@ This release aligns the visual styling, interfaces, and experience of `rSaver` a
 
 ---
 
-## 🩺 CLI Subcommands & Flags
+## CLI Subcommands & Flags
 `rSaver` acts as both a dashboard and a screensaver command-line handler.
 
 ```powershell
@@ -68,7 +57,7 @@ rsav.exe [OPTIONS] [COMMAND]
 
 ---
 
-## ⌨️ TUI Keyboard Controls
+## TUI Keyboard Controls
 Use the following shortcuts to navigate the dashboard:
 *   **`Tab / Shift-Tab`** : Cycle focus between *Global Preferences* and the *Screensaver List*.
 *   **`↑ / ↓` or `k / j`** : Navigate lists and settings.
@@ -82,7 +71,7 @@ Use the following shortcuts to navigate the dashboard:
 
 ---
 
-## 💾 Custom Preferences & Data Storage
+## Custom Preferences & Data Storage
 All data is stored locally under your Windows user profile:
 *   **rSaver Custom Preferences**: Stored at `%APPDATA%\rSaver\config.yaml` (contains last-selected screensaver, prevent-sleep status, custom cycle interval, and catalog feed URLs).
 *   **Screensaver Drop Path**: Put custom `.scr` screensavers in `%APPDATA%\rSaver\screensavers` to have `rSaver` discover them.
@@ -96,7 +85,7 @@ feed_urls: https://raw.githubusercontent.com/tourian-dynamics/rSaver/master/regi
 
 ---
 
-## 🛠️ Building From Source
+## Building From Source
 Ensure you have the Rust compiler toolchain installed on Windows.
 
 1. Clone the repository and navigate to the folder:

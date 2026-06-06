@@ -1,20 +1,4 @@
-```text
-         _____                               
-   _____/ ___/____ __   _____  _____         
-  / ___/\__ \/ __ `/ | / / _ \/ ___/         
- / /   ___/ / /_/ /| |/ /  __/ /             
-/_/   /____/\__,_/ |___/\___/_/              
-```
-
-```text
-  _____                       _             
- |_   _|___ _ _ ___ _ ___ _ _| |_ _ _____ ___
-   | | | . | | |  _| | . | | | . | | |     |  _|
-   |_| |___|___|_| |_|___|_|_|___|_|_|_|_|_|___|
-                                  D Y N A M I C S
-```
-
-# ⚖️ rSaver Copyright Notice
+# rSaver Copyright Notice
 
 Copyright (c) 2026 Tourian Dynamics. All rights reserved.
 
@@ -22,12 +6,12 @@ rSaver (Windows Screensavers Manager) is authored by **UberMetroid** and distrib
 
 ---
 
-## 📄 License Reference
+## License Reference
 The full terms of the license governing rSaver can be found in the [LICENSE.md](LICENSE.md) file in this repository.
 
 ---
 
-## 📦 Third-Party Dependency Licenses
+## Third-Party Dependency Licenses
 rSaver relies on several open-source libraries. Below is the attribution for the primary components compiled into the binary:
 
 | Dependency | License | Copyright / Attribution |
