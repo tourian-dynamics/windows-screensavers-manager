@@ -43,7 +43,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border))
         .title(Span::styled(
-            " Rust Screensaver Manager ",
+            " rIdle - Screensaver Manager ",
             Style::default().fg(theme.accent_primary).add_modifier(Modifier::BOLD),
         ));
     

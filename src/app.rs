@@ -1049,7 +1049,31 @@ pub fn run_random_cycle() {
         }
         mask = crate::win32::CycleMask::new();
         std::thread::sleep(std::time::Duration::from_millis(50));
-        let _ = child.kill();
+        #[cfg(target_os = "windows")]
+        {
+            let _ = std::process::Command::new("taskkill")
+                .args(["/PID", &child.id().to_string()])
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status();
+
+            let start_wait = std::time::Instant::now();
+            let mut grace_exit = false;
+            while start_wait.elapsed() < std::time::Duration::from_millis(300) {
+                if let Ok(Some(_)) = child.try_wait() {
+                    grace_exit = true;
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            }
+            if !grace_exit {
+                let _ = child.kill();
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = child.kill();
+        }
     }
 }
 

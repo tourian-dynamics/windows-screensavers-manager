@@ -258,7 +258,7 @@ pub fn spawn_download(entry: &RegistryEntry) -> Arc<Mutex<DownloadState>> {
             }
 
             let response = ureq::get(&download_url)
-                .set("User-Agent", "rIdle/2.6.3 (+https://github.com/local76)")
+                .set("User-Agent", "rIdle/2.6.4 (+https://github.com/local76)")
                 .call()?;
             let total_bytes = response
                 .header("Content-Length")

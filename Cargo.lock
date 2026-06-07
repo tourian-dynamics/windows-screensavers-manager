@@ -324,7 +324,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -781,8 +781,7 @@ dependencies = [
 
 [[package]]
 name = "rcommon"
-version = "0.1.0"
-source = "git+https://github.com/local76/rCommon.git?branch=main#0e87745659ba062ae0e6b1120c1ae62b59a211ee"
+version = "1.0.0"
 dependencies = [
  "crossterm",
  "ratatui",
@@ -863,7 +862,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

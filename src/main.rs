@@ -58,7 +58,7 @@ use winreg::enums::HKEY_CURRENT_USER;
 use crate::app::{App, KeyCode, KeyModifiers};
 use crate::config::{GlobalConfig, LocalConfig};
 use crate::theme::TuiTheme;
-use crate::win32::BorderlessConsole;
+// use crate::win32::BorderlessConsole;
 
 /// Screen saver management for Windows.
 #[derive(Parser, Debug)]
@@ -256,7 +256,7 @@ fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Error
         EnableMouseCapture
     )?;
 
-    let _borderless = BorderlessConsole::enable();
+    // let _borderless = BorderlessConsole::enable();
     // Allow Win32 window style/size changes to propagate to the console buffer
     std::thread::sleep(std::time::Duration::from_millis(50));
 

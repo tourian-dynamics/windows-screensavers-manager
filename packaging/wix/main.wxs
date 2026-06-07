@@ -20,6 +20,9 @@
             Compressed='yes'
             SummaryCodepage='1252'/>
 
+        <Icon Id='app_ico' SourceFile='assets\brand\app.ico'/>
+        <Property Id='ARPPRODUCTICON' Value='app_ico'/>
+
         <Media Id='1' Cabinet='media1.cab' EmbedCab='yes' DiskPrompt='CD-ROM #1'/>
         <Property Id='DiskPrompt' Value='rIdle Installation [1]'/>
 

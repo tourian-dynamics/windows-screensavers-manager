@@ -1,0 +1,4 @@
+#!/bin/sh
+set -e
+echo "ridle installed successfully."
+exit 0

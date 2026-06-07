@@ -52,21 +52,21 @@
 
 │   ├── binaries/                                     # Folder for raw, un-packaged compiled executables
 
-│   │   ├── rtemplate                                 # Compiled raw binary for Linux
+│   │   ├── ridle                                 # Compiled raw binary for Linux
 
-│   │   └── rtemplate.exe                             # Compiled raw binary for Windows
+│   │   └── ridle.exe                             # Compiled raw binary for Windows
 
 │   └── packages/                                     # Folder for final bundled distribution formats
 
-│       ├── rtemplate.apk                             # Compiled Alpine Linux package
+│       ├── ridle.apk                             # Compiled Alpine Linux package
 
-│       ├── rtemplate.appimage                        # Compiled universal Linux portable executable
+│       ├── ridle.appimage                        # Compiled universal Linux portable executable
 
-│       ├── rtemplate.deb                             # Compiled Debian/Ubuntu installation package
+│       ├── ridle.deb                             # Compiled Debian/Ubuntu installation package
 
-│       ├── rtemplate.msi                             # Compiled Windows installer package
+│       ├── ridle.msi                             # Compiled Windows installer package
 
-│       └── rtemplate.rpm                             # Compiled RedHat/Fedora installation package
+│       └── ridle.rpm                             # Compiled RedHat/Fedora installation package
 
 ├── docs/                                             # Deep-dive documentation for users/contributors
 
@@ -98,15 +98,15 @@
 
 │   │   ├── generate-completions.sh                   # Script to auto-generate below files via Rust 'clap'
 
-│   │   ├── rtemplate.bash                            # Auto-completion logic for Bash shell
+│   │   ├── ridle.bash                            # Auto-completion logic for Bash shell
 
-│   │   ├── rtemplate.fish                            # Auto-completion logic for Fish shell
+│   │   ├── ridle.fish                            # Auto-completion logic for Fish shell
 
-│   │   ├── rtemplate.nu                              # Auto-completion logic for Nushell
+│   │   ├── ridle.nu                              # Auto-completion logic for Nushell
 
-│   │   ├── rtemplate.ps1                             # Auto-completion logic for PowerShell
+│   │   ├── ridle.ps1                             # Auto-completion logic for PowerShell
 
-│   │   └── rtemplate.zsh                             # Auto-completion logic for Zsh shell
+│   │   └── ridle.zsh                             # Auto-completion logic for Zsh shell
 
 │   ├── deb/                                          # Debian/Ubuntu package environment
 
@@ -122,15 +122,15 @@
 
 │   ├── desktop/                                      # Standard Linux desktop integration files
 
-│   │   ├── rtemplate.1                               # Linux man page documentation for terminal users
+│   │   ├── ridle.1                               # Linux man page documentation for terminal users
 
-│   │   └── rtemplate.desktop                         # Linux application launcher shortcut and metadata
+│   │   └── ridle.desktop                         # Linux application launcher shortcut and metadata
 
 │   ├── flatpak/                                      # Flatpak sandboxed application environment
 
 │   │   ├── build-flatpak.sh                          # Isolated script to execute 'flatpak-builder'
 
-│   │   └── org.local76.rtemplate.yaml                # Flatpak manifest defining dependencies
+│   │   └── org.local76.ridle.yaml                # Flatpak manifest defining dependencies
 
 │   ├── nix/                                          # NixOS / Nix package manager environment
 
@@ -142,7 +142,7 @@
 
 │   │   ├── build-redhat-rpm.sh                       # Isolated script to set up rpmbuild tree and execute
 
-│   │   └── rtemplate.spec                            # RPM specification file (Name, Version, %prep, %build)
+│   │   └── ridle.spec                            # RPM specification file (Name, Version, %prep, %build)
 
 │   ├── winget/                                       # Windows Package Manager environment
 

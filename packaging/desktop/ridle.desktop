@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=rIdle
+Comment=A project template for creating unified local terminal utilities in Rust
+Exec=ridle
+Icon=ridle
+Terminal=true
+Categories=Utility;System;

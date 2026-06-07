@@ -1,0 +1,11 @@
+app-id: org.local76.ridle
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: ridle
+modules:
+  - name: ridle
+    buildsystem: simple
+    build-commands:
+      - cargo build --release --locked
+      - install -Dm755 target/release/ridle /app/bin/ridle

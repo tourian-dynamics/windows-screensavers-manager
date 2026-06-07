@@ -1,6 +1,6 @@
 [package]
 name = "ridle"
-version = "2.6.3"
+version = "2.6.4"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
@@ -53,3 +53,4 @@ assets = [
 # To build locally before pushing rCommon to GitHub, uncomment:
 # [patch."https://github.com/local76/rCommon.git"]
 # rcommon = { path = "../rCommon" }
+
