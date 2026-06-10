@@ -24,7 +24,7 @@ pub fn format_help_row(
     max_desc_width: usize,
     theme: &TuiTheme,
 ) -> Vec<Line<'static>> {
-    let theme_colors = library::interface::tui::design::prelude::ThemeColors {
+    let theme_colors = library::ui::theme::ThemeColors {
         border: Color::Reset,
         border_active: Color::Reset,
         text_main: theme.text_main,
@@ -38,7 +38,7 @@ pub fn format_help_row(
         selection_bg: Color::Reset,
         selection_fg: Color::Reset,
     };
-    library::interface::tui::design::prelude::format_help_row(
+    library::ui::layout::format_help_row(
         key,
         description,
         max_desc_width,

@@ -6,7 +6,7 @@
 use std::time::Duration;
 use tracing::info;
 
-use library::lifecycle::foreground::tui_bootstrap::{bootstrap_tui, shutdown_tui, TuiBootstrapConfig};
+use library::apps::tui_bootstrap::{bootstrap_tui, shutdown_tui, TuiBootstrapConfig};
 use ratatui::crossterm::event::{self, Event, KeyEventKind};
 
 pub mod preview;
@@ -68,7 +68,7 @@ pub fn run_tui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::E
     let mut sync_check_timer: u32 = 0;
 
     loop {
-        if library::lifecycle::foreground::tui_bootstrap::is_app_shutting_down() {
+        if library::apps::tui_bootstrap::is_app_shutting_down() {
             break;
         }
         if app.should_quit {

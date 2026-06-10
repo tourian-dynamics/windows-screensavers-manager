@@ -279,7 +279,7 @@ pub fn spawn_download(entry: &RegistryEntry) -> Arc<Mutex<DownloadState>> {
 
                 let mut buffer = [0; 8192];
                 loop {
-                    if library::lifecycle::foreground::tui_bootstrap::is_app_shutting_down() {
+                    if library::apps::tui_bootstrap::is_app_shutting_down() {
                         return Err("Download cancelled: Application shutting down".into());
                     }
                     let bytes_read = src_file.read(&mut buffer)?;
@@ -313,7 +313,7 @@ pub fn spawn_download(entry: &RegistryEntry) -> Arc<Mutex<DownloadState>> {
                 let mut buffer = [0; 8192];
 
                 loop {
-                    if library::lifecycle::foreground::tui_bootstrap::is_app_shutting_down() {
+                    if library::apps::tui_bootstrap::is_app_shutting_down() {
                         return Err("Download cancelled: Application shutting down".into());
                     }
                     let bytes_read = reader.read(&mut buffer)?;

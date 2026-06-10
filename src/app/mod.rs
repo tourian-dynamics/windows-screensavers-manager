@@ -202,15 +202,15 @@ impl App {
             let state = std::sync::Arc::new(std::sync::Mutex::new(None));
             let thread_state = state.clone();
             let feed_urls = local.feed_urls.clone();
-            if !library::lifecycle::foreground::tui_bootstrap::is_app_shutting_down() {
+            if !library::apps::tui_bootstrap::is_app_shutting_down() {
                 std::thread::spawn(move || {
-                    if library::lifecycle::foreground::tui_bootstrap::is_app_shutting_down() {
+                    if library::apps::tui_bootstrap::is_app_shutting_down() {
                         return;
                     }
                     let mut all_entries = Vec::new();
                     if let Ok(local_entries) = downloader::load_local_registry() {
                         for entry in local_entries {
-                            if library::lifecycle::foreground::tui_bootstrap::is_app_shutting_down() {
+                            if library::apps::tui_bootstrap::is_app_shutting_down() {
                                 return;
                             }
                             if !all_entries.iter().any(|e: &downloader::RegistryEntry| e.name.eq_ignore_ascii_case(&entry.name)) {
@@ -219,12 +219,12 @@ impl App {
                         }
                     }
                     for url in feed_urls {
-                        if library::lifecycle::foreground::tui_bootstrap::is_app_shutting_down() {
+                        if library::apps::tui_bootstrap::is_app_shutting_down() {
                             return;
                         }
                         if let Ok(entries) = downloader::fetch_registry(&url) {
                             for entry in entries {
-                                if library::lifecycle::foreground::tui_bootstrap::is_app_shutting_down() {
+                                if library::apps::tui_bootstrap::is_app_shutting_down() {
                                     return;
                                 }
                                 if !all_entries.iter().any(|e: &downloader::RegistryEntry| e.name.eq_ignore_ascii_case(&entry.name)) {
