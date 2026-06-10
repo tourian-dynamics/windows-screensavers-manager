@@ -176,14 +176,27 @@ impl App {
         theme: TuiTheme,
     ) -> Self {
         let mut local = local;
+        let mut config_changed = false;
+
         if local.hide_stock {
             let orig_len = local.selected_paths.len();
             local.selected_paths.retain(|p| {
                 !preview::is_stock_screensaver(std::path::Path::new(p))
             });
             if local.selected_paths.len() != orig_len {
-                let _ = local.save();
+                config_changed = true;
             }
+        }
+
+        // Remove any selected paths that do not exist on disk anymore
+        let orig_len = local.selected_paths.len();
+        local.selected_paths.retain(|p| std::path::Path::new(p).exists());
+        if local.selected_paths.len() != orig_len {
+            config_changed = true;
+        }
+
+        if config_changed {
+            let _ = local.save();
         }
 
         let highlighted = local
