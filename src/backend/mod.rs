@@ -1,4 +1,4 @@
-//! Main event loop and UI runner for trance.
+﻿//! Main event loop and UI runner for trance.
 //!
 //! **Taxonomy Classification**: Interface (UI / Presentation Layer).
 
@@ -36,8 +36,8 @@ pub fn run_ui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Er
         return Err("Interactive app requires a TTY stdin.".into());
     }
 
-    if library::window::should_relaunch_in_conhost() {
-        let _ = library::window::relaunch_in_conhost();
+    if library::apps::window::should_relaunch_in_conhost() {
+        let _ = library::apps::window::relaunch_in_conhost();
         std::process::exit(0);
     }
 

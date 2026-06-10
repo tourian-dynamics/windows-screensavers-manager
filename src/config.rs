@@ -1,4 +1,4 @@
-//! Two pieces of persisted state:
+﻿//! Two pieces of persisted state:
 //!  - `GlobalConfig` lives in the Windows registry under
 //!    `HKCU\Control Panel\Desktop` (the keys Windows itself uses).
 //!    (On Linux this is a no-op / stub for now.)
@@ -39,9 +39,9 @@ impl Default for GlobalConfig {
 
 impl GlobalConfig {
     pub fn load() -> Self {
-        let active_scr = library::reg::read_string(library::reg::HKEY_CURRENT_USER, REG_DESKTOP, REG_SCR).unwrap_or_default();
-        let active = library::reg::read_string(library::reg::HKEY_CURRENT_USER, REG_DESKTOP, REG_ACTIVE).as_deref() == Some("1");
-        let timeout = library::reg::read_string(library::reg::HKEY_CURRENT_USER, REG_DESKTOP, REG_TIMEOUT)
+        let active_scr = library::toolkit::registry::read_string(library::toolkit::registry::HKEY_CURRENT_USER, REG_DESKTOP, REG_SCR).unwrap_or_default();
+        let active = library::toolkit::registry::read_string(library::toolkit::registry::HKEY_CURRENT_USER, REG_DESKTOP, REG_ACTIVE).as_deref() == Some("1");
+        let timeout = library::toolkit::registry::read_string(library::toolkit::registry::HKEY_CURRENT_USER, REG_DESKTOP, REG_TIMEOUT)
             .and_then(|s| s.parse::<u32>().ok())
             .unwrap_or(DEFAULT_TIMEOUT_SECS);
         GlobalConfig {
@@ -53,9 +53,9 @@ impl GlobalConfig {
 
     pub fn save(&self) -> std::io::Result<()> {
         let res = (|| {
-            library::reg::write_string(library::reg::HKEY_CURRENT_USER, REG_DESKTOP, REG_SCR, &self.active_scr)?;
-            library::reg::write_string(library::reg::HKEY_CURRENT_USER, REG_DESKTOP, REG_ACTIVE, if self.active { "1" } else { "0" })?;
-            library::reg::write_string(library::reg::HKEY_CURRENT_USER, REG_DESKTOP, REG_TIMEOUT, &self.timeout.to_string())?;
+            library::toolkit::registry::write_string(library::toolkit::registry::HKEY_CURRENT_USER, REG_DESKTOP, REG_SCR, &self.active_scr)?;
+            library::toolkit::registry::write_string(library::toolkit::registry::HKEY_CURRENT_USER, REG_DESKTOP, REG_ACTIVE, if self.active { "1" } else { "0" })?;
+            library::toolkit::registry::write_string(library::toolkit::registry::HKEY_CURRENT_USER, REG_DESKTOP, REG_TIMEOUT, &self.timeout.to_string())?;
 
             // Propagate settings changes to the OS immediately
             if !cfg!(test) {
@@ -137,7 +137,7 @@ impl LocalConfig {
             self.prevent_sleep,
             self.hide_stock,
         );
-        library::write_file_atomic(path, content)
+        library::core::write_file_atomic(path, content)
     }
 }
 
