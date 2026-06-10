@@ -12,9 +12,9 @@ use library::ui::layout::centered_rect;
 use crate::app::App;
 
 pub mod widgets;
-pub mod utils;
+pub mod text_format;
 
-pub use utils::truncate;
+pub use text_format::truncate;
 
 /// Render the entire application interface to the Ratatui Frame.
 pub fn render(app: &mut App, frame: &mut Frame) {
@@ -365,61 +365,61 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         let mut help_text = Vec::new();
         help_text.push(Line::from(""));
 
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "Tab / Shift-Tab",
             "Cycle active panel focus",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "Up / Down",
             "Navigate lists and preference fields",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "Left / Right",
             "Adjust settings and toggle flags",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "Space / Enter",
             "Toggle screensaver selection / Apply settings",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "p / t",
             "Preview highlighted screensaver",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "c / C",
             "Configure highlighted screensaver",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "d / D",
             "Delete downloaded screensaver from list",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "r / R",
             "Refresh screensavers list",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "Esc / q",
             "Close dialogs / Help Overlay, or Quit application",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "h / H",
             "Toggle this help shortcut overlay modal",
             max_desc_width,
@@ -427,43 +427,43 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         ));
 
         help_text.push(Line::from(""));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "F1",
             "View README.md document",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "F2",
             "View SUPPORT.md document",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "F3",
             "View LICENSE.md document",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "F4",
             "View COPYRIGHT.md document",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "F5",
             "View PRIVACY.md document",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "F6",
             "View SECURITY.md document",
             max_desc_width,
             &theme,
         ));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "F7",
             "View CONTRIBUTING.md document",
             max_desc_width,
@@ -471,7 +471,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         ));
 
         help_text.push(Line::from(""));
-        help_text.extend(utils::format_help_row(
+        help_text.extend(text_format::format_help_row(
             "CLI Subcommands",
             "trance.exe [tui | run | stop | toggle-active | lock | configure | preview | doctor]",
             max_desc_width,
