@@ -48,8 +48,35 @@ pub fn run_ui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Er
 
     let screensavers = preview::discover();
 
-    let global = GlobalConfig::load();
-    let local = LocalConfig::load();
+    let mut global = GlobalConfig::load();
+    let mut local = LocalConfig::load();
+
+    // Clean up registry if the active screensaver points to a missing file
+    if !global.active_scr.is_empty() {
+        let path = std::path::Path::new(&global.active_scr);
+        if !path.exists() {
+            tracing::warn!(path = ?global.active_scr, "Active screensaver in registry is missing, resetting registry.");
+            let first_valid = screensavers.iter().find(|s| s.path.exists());
+            if let Some(s) = first_valid {
+                global.active_scr = s.path.to_string_lossy().into_owned();
+                global.active = true;
+            } else {
+                global.active_scr = String::new();
+                global.active = false;
+            }
+            let _ = global.save();
+        }
+    }
+
+    // Clean up local preferences if the last selected screensaver doesn't exist
+    if let Some(ref name) = local.last_selected {
+        let exists = screensavers.iter().any(|s| s.path.file_name().and_then(|f| f.to_str()) == Some(name));
+        if !exists {
+            local.last_selected = None;
+            let _ = local.save();
+        }
+    }
+
     let theme = TuiTheme::detect(theme_override);
     log_environment(&theme);
 

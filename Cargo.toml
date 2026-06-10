@@ -40,7 +40,7 @@ embed-resource = "2"
 [package.metadata.deb]
 maintainer = "Jeryd <jerydleuck@gmail.com>"
 assets = [
-    ["target/x86_64-unknown-linux-musl/release/trance", "usr/bin/trance", "755"],
+    ["target/release/trance", "usr/bin/trance", "755"],
     ["assets/brand/app_icon.png", "usr/share/pixmaps/trance.png", "644"],
     ["packaging/desktop/trance.desktop", "usr/share/applications/trance.desktop", "644"],
 ]
