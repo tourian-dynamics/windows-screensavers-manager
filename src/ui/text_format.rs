@@ -1,6 +1,6 @@
 //! Helper styling and formatting utilities for UI modules.
 //!
-//! **Taxonomy Classification**: Interface (TUI / UI Utilities).
+//! **Taxonomy Classification**: Interface (UI Utilities).
 
 use ratatui::style::Color;
 use ratatui::text::Line;

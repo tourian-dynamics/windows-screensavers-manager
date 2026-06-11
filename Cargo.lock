@@ -775,10 +775,9 @@ checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
 name = "library"
-version = "2026.6.11"
+version = "2026.6.10-1"
 dependencies = [
  "crossterm",
- "libc",
  "ratatui",
  "rusqlite",
  "sysinfo",
@@ -1861,7 +1860,7 @@ dependencies = [
 
 [[package]]
 name = "trance"
-version = "2026.6.11"
+version = "2026.6.10-1"
 dependencies = [
  "clap",
  "crossterm",

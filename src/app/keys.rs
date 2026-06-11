@@ -1,6 +1,6 @@
 //! Keyboard input and focus control handling.
 //!
-//! **Taxonomy Classification**: Interface (TUI / Keyboard & Focus).
+//! **Taxonomy Classification**: Interface (Keyboard & Focus).
 
 use crate::app::{App, FocusedSection, GlobalField, StatusMessage, StatusKind};
 use crate::config::GlobalConfig;

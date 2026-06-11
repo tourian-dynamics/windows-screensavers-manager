@@ -1,6 +1,6 @@
 //! Sub-panel rendering components (Preferences & Saver List).
 //!
-//! **Taxonomy Classification**: Interface (TUI / Panels).
+//! **Taxonomy Classification**: Interface (Panels).
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};

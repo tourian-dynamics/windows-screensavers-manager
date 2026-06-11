@@ -6,7 +6,7 @@
 use std::time::Duration;
 use tracing::info;
 
-use library::apps::tui_bootstrap::{bootstrap_tui, shutdown_tui, TuiBootstrapConfig};
+use library::apps::bootstrap::{init, shutdown, Config as BootstrapConfig};
 use crossterm::event::{self, Event, KeyEventKind};
 
 pub mod preview;
@@ -41,10 +41,10 @@ pub fn run_ui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Er
         std::process::exit(0);
     }
 
-    let mut tui_config = TuiBootstrapConfig::new("trance");
+    let mut tui_config = BootstrapConfig::new("trance");
     tui_config.size = (100, 35);
 
-    let (mut terminal, _guards) = bootstrap_tui(tui_config)?;
+    let (mut terminal, _guards) = init(tui_config)?;
 
     let screensavers = preview::discover();
 
@@ -88,7 +88,7 @@ pub fn run_ui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Er
     let mut sync_check_timer: u32 = 0;
 
     loop {
-        if library::apps::tui_bootstrap::is_app_shutting_down() {
+        if library::apps::bootstrap::is_app_shutting_down() {
             break;
         }
         if app.should_quit {
@@ -248,7 +248,7 @@ pub fn run_ui(theme_override: Option<&str>) -> Result<(), Box<dyn std::error::Er
     // Release any sleep-inhibition we may have set, then restore the
     // terminal and console window.
     win32::set_thread_execution_state(false);
-    shutdown_tui(&mut terminal)?;
+    shutdown(&mut terminal)?;
     Ok(())
 }
 

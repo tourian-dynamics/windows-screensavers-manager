@@ -1,6 +1,6 @@
 //! Ratatui-based rendering. Pure function of `App` -> `Frame`.
 //!
-//! **Taxonomy Classification**: Interface (TUI / Main Rendering Layout).
+//! **Taxonomy Classification**: Interface (Main Rendering Layout).
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};

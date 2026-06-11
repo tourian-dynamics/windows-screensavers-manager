@@ -1,6 +1,6 @@
 //! Markdown text parsing utilities for rendering embedded documents.
 //!
-//! **Taxonomy Classification**: Interface (TUI / Document Parsing).
+//! **Taxonomy Classification**: Interface (Document Parsing).
 
 use crate::theme::TuiTheme;
 

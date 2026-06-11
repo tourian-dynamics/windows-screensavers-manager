@@ -1,6 +1,6 @@
 //! State mutation and action execution triggers.
 //!
-//! **Taxonomy Classification**: Interface (TUI / Action Handlers).
+//! **Taxonomy Classification**: Interface (Action Handlers).
 
 use crate::app::{App, StatusMessage, StatusKind};
 use crate::backend::preview;

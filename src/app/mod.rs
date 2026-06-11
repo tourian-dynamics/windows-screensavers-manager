@@ -1,6 +1,6 @@
 //! Application state, focus, and key bindings.
 //!
-//! **Taxonomy Classification**: Interface (TUI / State Coordination).
+//! **Taxonomy Classification**: Interface (State Coordination).
 
 use crate::config::{GlobalConfig, LocalConfig};
 use crate::backend::preview::Screensaver;
@@ -22,7 +22,7 @@ const PRIVACY_CONTENT: &str = include_str!("../../PRIVACY.md");
 const SECURITY_CONTENT: &str = include_str!("../../SECURITY.md");
 const CONTRIBUTING_CONTENT: &str = include_str!("../../CONTRIBUTING.md");
 
-/// Focused section in the TUI dashboard.
+/// Focused section in the console dashboard.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FocusedSection {
     /// Global preferences config pane.
@@ -31,7 +31,7 @@ pub enum FocusedSection {
     SaverList,
 }
 
-/// Dynamic global config fields in the TUI dashboard.
+/// Dynamic global config fields in the console dashboard.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GlobalField {
     /// Active screensaver enabled/disabled state.
@@ -65,7 +65,7 @@ pub enum StatusKind {
 
 
 
-/// Status message displayed on the TUI status bar.
+/// Status message displayed on the console status bar.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StatusMessage {
     /// Status message text.
@@ -88,7 +88,7 @@ pub struct App {
     pub global: GlobalConfig,
     /// Local user config.
     pub local: LocalConfig,
-    /// TUI theme colors.
+    /// console theme colors.
     pub theme: TuiTheme,
     /// Status message state.
     pub status: Option<StatusMessage>,
@@ -122,7 +122,7 @@ pub struct App {
     pub quit_btn_bounds: Option<(u16, u16, u16)>,
     /// Help button screen bounds.
     pub help_btn_bounds: Option<(u16, u16, u16)>,
-    /// Custom TUI window dragging state.
+    /// Custom console window dragging state.
     pub drag_active: bool,
     /// Cursor coordinates on drag start.
     pub drag_start_cursor: Option<(i32, i32)>,
